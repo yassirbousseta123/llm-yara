@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llmyara"
+version = "0.1.0"
+description = "Deterministic, reproducible LLM-assisted YARA rule generation pipeline"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Yassir BOUSSETA" }]
+dependencies = [
+  "PyYAML==6.0.2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==8.3.4",
+]
+runtime = [
+  "pefile==2024.8.26",
+  "yara-python==4.5.1",
+  "openai==1.61.1",
+]
+ml = [
+  "numpy==2.2.2",
+  "pandas==2.2.3",
+  "scikit-learn==1.6.1",
+]
+
+[project.scripts]
+llmyara = "llmyara.cli:main"
+
+[tool.setuptools]
+packages = ["llmyara", "llmyara.data", "llmyara.features", "llmyara.selection", "llmyara.llm", "llmyara.yara", "llmyara.pipeline", "llmyara.eval", "llmyara.utils", "baselines"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]

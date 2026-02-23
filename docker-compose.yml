@@ -1,0 +1,15 @@
+services:
+  llmyara:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: llmyara:latest
+    container_name: llmyara
+    environment:
+      - LLM_BACKEND=${LLM_BACKEND:-mock}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    volumes:
+      - ./outputs:/outputs
+      - ./data:/data:ro
+    working_dir: /app
+    command: ["--mode", "demo"]

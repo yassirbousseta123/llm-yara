@@ -1,0 +1,22 @@
+seed: 42
+split:
+  test_ratio: 0.3
+  benign_dev_ratio: 0.6
+  min_family_size: 6
+features:
+  strings_min_len: 6
+  strings_max_per_file: 150
+selection:
+  top_k_features: 30
+yara:
+  max_strings: 20
+  max_rule_bytes: 2048
+  max_condition_length: 320
+  max_repairs: 3
+  benign_dev_fpr_threshold: 0.02
+llm:
+  model: gpt-5.2-pro
+  temperature: 0.0
+  timeout_seconds: 90
+runtime:
+  workers: 1

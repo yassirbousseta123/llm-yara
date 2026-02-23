@@ -1,0 +1,13 @@
+.git
+.gitignore
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+llmyara.egg-info
+outputs
+data
+tests
+project_2.md
+LLM_YARA_Project_Plan_FINAL.pdf
+.DS_Store
