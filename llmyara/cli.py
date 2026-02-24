@@ -6,11 +6,13 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from baselines.apiary_static import write_baseline_rules as write_apiary_static_rules
 from baselines.topstrings_baseline import write_baseline_rules
 from llmyara.config import load_config
 from llmyara.data.demo_data import create_demo_dataset
 from llmyara.data.indexer import build_manifest
 from llmyara.data.splits import build_splits
+from llmyara.eval.baseline_compare import evaluate_baselines
 from llmyara.eval.evaluate import evaluate_rules, write_results_csv
 from llmyara.eval.reports import write_summary_markdown
 from llmyara.features.extract import extract_features
@@ -119,6 +121,44 @@ def cmd_baseline_topstrings(args: argparse.Namespace) -> None:
     print(f"baseline_rules_written={len(paths)} out={args.out}")
 
 
+def cmd_baseline_apiary_static(args: argparse.Namespace) -> None:
+    features = list(read_jsonl(args.features))
+    splits = _read_json(args.splits)
+    result = write_apiary_static_rules(
+        features=features,
+        splits=splits,
+        out_dir=args.out,
+        max_strings=args.max_strings,
+        min_score=args.min_score,
+    )
+    manifest = {
+        "method": "apiary-static",
+        "status": "re-implemented",
+        **result,
+    }
+    write_json(Path(args.out) / "baseline_manifest.json", manifest)
+    print(f"baseline_rules_written={len(result['rule_paths'])} out={args.out}")
+
+
+def cmd_baseline_eval(args: argparse.Namespace) -> None:
+    manifest = list(read_jsonl(args.manifest))
+    splits = _read_json(args.splits)
+    selected = _read_json(args.selected)
+    features = list(read_jsonl(args.features))
+
+    result = evaluate_baselines(
+        manifest=manifest,
+        splits=splits,
+        selected=selected,
+        features=features,
+        out_dir=args.out,
+        topstrings_max_strings=args.topstrings_max_strings,
+        apiary_max_strings=args.apiary_max_strings,
+        apiary_min_score=args.apiary_min_score,
+    )
+    print(f"baseline_comparison_written={result['comparison_csv']}")
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="LLM-YARA pipeline CLI")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -181,6 +221,31 @@ def _build_parser() -> argparse.ArgumentParser:
     baseline.add_argument("--out", required=True)
     baseline.add_argument("--max-strings", type=int, default=8)
     baseline.set_defaults(func=cmd_baseline_topstrings)
+
+    baseline_apiary = sub.add_parser(
+        "baseline-apiary-static",
+        help="Generate APIARY-inspired static discriminative import baseline rules",
+    )
+    baseline_apiary.add_argument("--features", required=True)
+    baseline_apiary.add_argument("--splits", required=True)
+    baseline_apiary.add_argument("--out", required=True)
+    baseline_apiary.add_argument("--max-strings", type=int, default=8)
+    baseline_apiary.add_argument("--min-score", type=float, default=0.0)
+    baseline_apiary.set_defaults(func=cmd_baseline_apiary_static)
+
+    baseline_eval = sub.add_parser(
+        "baseline-eval",
+        help="Generate and evaluate shipped baselines, then write a comparison table",
+    )
+    baseline_eval.add_argument("--manifest", required=True)
+    baseline_eval.add_argument("--splits", required=True)
+    baseline_eval.add_argument("--selected", required=True)
+    baseline_eval.add_argument("--features", required=True)
+    baseline_eval.add_argument("--out", required=True)
+    baseline_eval.add_argument("--topstrings-max-strings", type=int, default=8)
+    baseline_eval.add_argument("--apiary-max-strings", type=int, default=8)
+    baseline_eval.add_argument("--apiary-min-score", type=float, default=0.0)
+    baseline_eval.set_defaults(func=cmd_baseline_eval)
 
     return parser
 

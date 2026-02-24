@@ -20,6 +20,16 @@ Read when:
 6. `evaluate`: Report family-level and aggregate metrics.
 7. `report`: Persist machine-readable and human-readable artifacts.
 
+## Baseline Contract
+- Baselines write one YARA file per family plus `baseline_manifest.json`.
+- Baseline manifest must include `status` label from: `reproduced`, `re-implemented`, `paper-only`.
+- Current shipped baselines:
+  - `baseline-topstrings` (`reproduced`)
+  - `baseline-apiary-static` (`re-implemented`)
+- `baseline-eval` writes:
+  - per-method folders with `rules/`, `baseline_manifest.json`, `results_per_family.csv`, `summary.json`, `summary.md`
+  - top-level `baseline_comparison.csv` and `baseline_comparison.json`
+
 ## Output Layout
 Each run writes a self-contained artifact bundle:
 - `run_manifest.json`: command + config snapshot

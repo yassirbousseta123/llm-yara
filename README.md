@@ -65,6 +65,35 @@ Key commands:
 - `evaluate`
 - `run-all`
 - `baseline-topstrings`
+- `baseline-apiary-static`
+- `baseline-eval`
+
+## Baselines
+- `baseline-topstrings`: deterministic string-only baseline (`reproduced`).
+- `baseline-apiary-static`: APIARY-inspired static import discriminative baseline (`re-implemented`).
+
+Example:
+```bash
+python -m llmyara.cli baseline-apiary-static \
+  --features /absolute/path/to/features.jsonl \
+  --splits /absolute/path/to/splits.json \
+  --out /absolute/path/to/outputs/baseline_apiary \
+  --max-strings 8 \
+  --min-score 0.0
+```
+
+Evaluate shipped baselines side-by-side:
+```bash
+python -m llmyara.cli baseline-eval \
+  --manifest /absolute/path/to/manifest.jsonl \
+  --splits /absolute/path/to/splits.json \
+  --selected /absolute/path/to/selected_features.json \
+  --features /absolute/path/to/features.jsonl \
+  --out /absolute/path/to/outputs/baseline_eval \
+  --topstrings-max-strings 8 \
+  --apiary-max-strings 8 \
+  --apiary-min-score 0.0
+```
 
 ## Reproducibility
 - Use fixed seeds from `configs/default.yaml`.
