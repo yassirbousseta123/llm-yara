@@ -48,6 +48,25 @@ pip install -e .[runtime,ml]
   --backend mock
 ```
 
+## Expected Dataset Layout
+Malware samples should be grouped by family:
+```text
+malware/
+  family_one/
+    sample_001.bin
+    sample_002.bin
+  family_two/
+    sample_001.bin
+benign/
+  benign_001.bin
+  benign_002.bin
+```
+
+Rules:
+- each malware family should live in its own first-level directory
+- benign files can live directly under `benign/`
+- files are treated as static inputs only; nothing is executed
+
 Professor-facing comparison run:
 ```bash
 ./start.sh --mode full \
@@ -60,6 +79,27 @@ Professor-facing comparison run:
 
 Use `--backend openai` only when `OPENAI_API_KEY` is set.
 Set `OPENAI_BASE_URL` if using an OpenAI-compatible local or hosted endpoint.
+
+## Recommended Final Workflow
+1. Run a real backend once and freeze the cache:
+```bash
+./start.sh --mode full \
+  --compare-all \
+  --malware-dir /absolute/path/to/malware \
+  --benign-dir /absolute/path/to/benign \
+  --out /absolute/path/to/outputs/final_compare \
+  --backend openai
+```
+2. Reproduce the same outputs from cache:
+```bash
+./start.sh --mode full \
+  --compare-all \
+  --malware-dir /absolute/path/to/malware \
+  --benign-dir /absolute/path/to/benign \
+  --out /absolute/path/to/outputs/final_compare_replay \
+  --backend replay
+```
+3. Write the report from the frozen artifact bundle, not from ad hoc reruns.
 
 ## CLI Reference
 ```bash
@@ -152,6 +192,25 @@ python -m llmyara.cli run-all-compare \
   --backend openai
 ```
 
+## Final Artifact Bundle
+A professor-facing `run-all-compare` output should contain:
+- `manifest.jsonl`
+- `splits.json`
+- `features.jsonl`
+- `selected_features.json`
+- `generation_summary.json`
+- `llm_cache.jsonl`
+- `results_per_family.csv`
+- `summary.json`
+- `summary.md`
+- `run_manifest.json`
+- `comparison_run_manifest.json`
+- `comparison/results_all_methods.csv`
+- `comparison/summary_all_methods.json`
+- `comparison/summary_all_methods.md`
+- `comparison/llmyara_llm/method_manifest.json`
+- `comparison/baselines/...`
+
 ## Reproducibility
 - Use fixed seeds from `configs/default.yaml`.
 - Use backend `replay` for deterministic regeneration from cached responses.
@@ -167,7 +226,15 @@ When reporting comparisons, label each method as one of:
 
 Avoid presenting `paper-only` results as directly comparable to your own split.
 
-## Limitations
+## Scope and Limitations
+- Static analysis only.
+- No dynamic analysis or malware execution in this repository.
+- Current feature extraction is PE-oriented; non-PE files are handled conservatively.
+- Shipped baselines are:
+  - `topstrings`
+  - `apiary-static`
+  - `autoyara-bicluster`
+- `mock` backend is for development/tests; final evaluation should use a real backend or replay from a real cached run.
 - Current feature set is static PE-oriented.
 - Non-PE files are safely skipped for PE-specific fields.
 - LLM quality depends on selected features and model availability.
