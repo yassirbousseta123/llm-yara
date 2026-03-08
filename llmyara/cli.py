@@ -7,16 +7,19 @@ from pathlib import Path
 from typing import Any
 
 from baselines.apiary_static import write_baseline_rules as write_apiary_static_rules
+from baselines.autoyara_bicluster import DEFAULT_NGRAM_SIZES, write_baseline_rules as write_autoyara_rules
 from baselines.topstrings_baseline import write_baseline_rules
 from llmyara.config import load_config
 from llmyara.data.demo_data import create_demo_dataset
 from llmyara.data.indexer import build_manifest
 from llmyara.data.splits import build_splits
 from llmyara.eval.baseline_compare import evaluate_baselines
+from llmyara.eval.compare_all import compare_all_methods
 from llmyara.eval.evaluate import evaluate_rules, write_results_csv
 from llmyara.eval.reports import write_summary_markdown
 from llmyara.features.extract import extract_features
 from llmyara.pipeline.generate import generate_rules
+from llmyara.pipeline.run_all_compare import run_all_compare
 from llmyara.pipeline.run_all import run_all
 from llmyara.selection.score import select_all_families
 from llmyara.utils.files import ensure_dir, write_json
@@ -25,6 +28,14 @@ from llmyara.utils.jsonl import read_jsonl, write_jsonl
 
 def _read_json(path: str | Path) -> dict[str, Any]:
     return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def _parse_int_csv(raw: str) -> tuple[int, ...]:
+    values = [item.strip() for item in raw.split(",")]
+    parsed = tuple(int(value) for value in values if value)
+    if not parsed:
+        raise ValueError("expected at least one integer value")
+    return parsed
 
 
 def cmd_make_demo_data(args: argparse.Namespace) -> None:
@@ -140,6 +151,28 @@ def cmd_baseline_apiary_static(args: argparse.Namespace) -> None:
     print(f"baseline_rules_written={len(result['rule_paths'])} out={args.out}")
 
 
+def cmd_baseline_autoyara(args: argparse.Namespace) -> None:
+    manifest = list(read_jsonl(args.manifest))
+    splits = _read_json(args.splits)
+    result = write_autoyara_rules(
+        manifest=manifest,
+        splits=splits,
+        out_dir=args.out,
+        ngram_sizes=_parse_int_csv(args.ngram_sizes),
+        max_strings=args.max_strings,
+        min_score=args.min_score,
+    )
+    write_json(
+        Path(args.out) / "baseline_manifest.json",
+        {
+            "method": "autoyara-bicluster",
+            "status": "re-implemented",
+            **result,
+        },
+    )
+    print(f"baseline_rules_written={len(result['rule_paths'])} out={args.out}")
+
+
 def cmd_baseline_eval(args: argparse.Namespace) -> None:
     manifest = list(read_jsonl(args.manifest))
     splits = _read_json(args.splits)
@@ -155,8 +188,53 @@ def cmd_baseline_eval(args: argparse.Namespace) -> None:
         topstrings_max_strings=args.topstrings_max_strings,
         apiary_max_strings=args.apiary_max_strings,
         apiary_min_score=args.apiary_min_score,
+        autoyara_max_strings=args.autoyara_max_strings,
+        autoyara_min_score=args.autoyara_min_score,
+        autoyara_ngram_sizes=_parse_int_csv(args.autoyara_ngram_sizes),
     )
     print(f"baseline_comparison_written={result['comparison_csv']}")
+
+
+def cmd_compare_all(args: argparse.Namespace) -> None:
+    manifest = list(read_jsonl(args.manifest))
+    splits = _read_json(args.splits)
+    selected = _read_json(args.selected)
+    features = list(read_jsonl(args.features))
+    generation = _read_json(args.generation)
+
+    result = compare_all_methods(
+        manifest=manifest,
+        splits=splits,
+        selected=selected,
+        features=features,
+        generation=generation,
+        out_dir=args.out,
+        topstrings_max_strings=args.topstrings_max_strings,
+        apiary_max_strings=args.apiary_max_strings,
+        apiary_min_score=args.apiary_min_score,
+        autoyara_max_strings=args.autoyara_max_strings,
+        autoyara_min_score=args.autoyara_min_score,
+        autoyara_ngram_sizes=_parse_int_csv(args.autoyara_ngram_sizes),
+    )
+    print(f"all_method_comparison_written={result['comparison_csv']}")
+
+
+def cmd_run_all_compare(args: argparse.Namespace) -> None:
+    cfg = load_config(args.config)
+    result = run_all_compare(
+        cfg=cfg,
+        malware_dir=args.malware_dir,
+        benign_dir=args.benign_dir,
+        out_dir=args.out,
+        backend_name=args.backend,
+        topstrings_max_strings=args.topstrings_max_strings,
+        apiary_max_strings=args.apiary_max_strings,
+        apiary_min_score=args.apiary_min_score,
+        autoyara_max_strings=args.autoyara_max_strings,
+        autoyara_min_score=args.autoyara_min_score,
+        autoyara_ngram_sizes=_parse_int_csv(args.autoyara_ngram_sizes),
+    )
+    print(json.dumps(result, indent=2))
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -216,6 +294,24 @@ def _build_parser() -> argparse.ArgumentParser:
     run_all_parser.add_argument("--out", required=True)
     run_all_parser.set_defaults(func=cmd_run_all)
 
+    run_all_compare = sub.add_parser("run-all-compare", help="Run full pipeline and compare all methods")
+    run_all_compare.add_argument("--config", default="configs/default.yaml")
+    run_all_compare.add_argument("--malware-dir", required=True)
+    run_all_compare.add_argument("--benign-dir", required=True)
+    run_all_compare.add_argument("--backend", default="mock", choices=["mock", "replay", "openai"])
+    run_all_compare.add_argument("--out", required=True)
+    run_all_compare.add_argument("--topstrings-max-strings", type=int, default=8)
+    run_all_compare.add_argument("--apiary-max-strings", type=int, default=8)
+    run_all_compare.add_argument("--apiary-min-score", type=float, default=0.0)
+    run_all_compare.add_argument("--autoyara-max-strings", type=int, default=12)
+    run_all_compare.add_argument("--autoyara-min-score", type=float, default=0.4)
+    run_all_compare.add_argument(
+        "--autoyara-ngram-sizes",
+        default=",".join(str(value) for value in DEFAULT_NGRAM_SIZES),
+        help="Comma-separated byte n-gram sizes for baseline-autoyara",
+    )
+    run_all_compare.set_defaults(func=cmd_run_all_compare)
+
     baseline = sub.add_parser("baseline-topstrings", help="Generate deterministic topstrings baseline rules")
     baseline.add_argument("--selected", required=True)
     baseline.add_argument("--out", required=True)
@@ -233,6 +329,22 @@ def _build_parser() -> argparse.ArgumentParser:
     baseline_apiary.add_argument("--min-score", type=float, default=0.0)
     baseline_apiary.set_defaults(func=cmd_baseline_apiary_static)
 
+    baseline_autoyara = sub.add_parser(
+        "baseline-autoyara",
+        help="Generate AutoYara-inspired byte n-gram bicluster baseline rules",
+    )
+    baseline_autoyara.add_argument("--manifest", required=True)
+    baseline_autoyara.add_argument("--splits", required=True)
+    baseline_autoyara.add_argument("--out", required=True)
+    baseline_autoyara.add_argument("--max-strings", type=int, default=12)
+    baseline_autoyara.add_argument(
+        "--ngram-sizes",
+        default=",".join(str(value) for value in DEFAULT_NGRAM_SIZES),
+        help="Comma-separated byte n-gram sizes, e.g. 8,16,32",
+    )
+    baseline_autoyara.add_argument("--min-score", type=float, default=0.4)
+    baseline_autoyara.set_defaults(func=cmd_baseline_autoyara)
+
     baseline_eval = sub.add_parser(
         "baseline-eval",
         help="Generate and evaluate shipped baselines, then write a comparison table",
@@ -245,7 +357,36 @@ def _build_parser() -> argparse.ArgumentParser:
     baseline_eval.add_argument("--topstrings-max-strings", type=int, default=8)
     baseline_eval.add_argument("--apiary-max-strings", type=int, default=8)
     baseline_eval.add_argument("--apiary-min-score", type=float, default=0.0)
+    baseline_eval.add_argument("--autoyara-max-strings", type=int, default=12)
+    baseline_eval.add_argument("--autoyara-min-score", type=float, default=0.4)
+    baseline_eval.add_argument(
+        "--autoyara-ngram-sizes",
+        default=",".join(str(value) for value in DEFAULT_NGRAM_SIZES),
+        help="Comma-separated byte n-gram sizes for baseline-autoyara",
+    )
     baseline_eval.set_defaults(func=cmd_baseline_eval)
+
+    compare_all = sub.add_parser(
+        "compare-all",
+        help="Evaluate the primary LLM run and shipped baselines on identical splits",
+    )
+    compare_all.add_argument("--manifest", required=True)
+    compare_all.add_argument("--splits", required=True)
+    compare_all.add_argument("--selected", required=True)
+    compare_all.add_argument("--features", required=True)
+    compare_all.add_argument("--generation", required=True)
+    compare_all.add_argument("--out", required=True)
+    compare_all.add_argument("--topstrings-max-strings", type=int, default=8)
+    compare_all.add_argument("--apiary-max-strings", type=int, default=8)
+    compare_all.add_argument("--apiary-min-score", type=float, default=0.0)
+    compare_all.add_argument("--autoyara-max-strings", type=int, default=12)
+    compare_all.add_argument("--autoyara-min-score", type=float, default=0.4)
+    compare_all.add_argument(
+        "--autoyara-ngram-sizes",
+        default=",".join(str(value) for value in DEFAULT_NGRAM_SIZES),
+        help="Comma-separated byte n-gram sizes for baseline-autoyara",
+    )
+    compare_all.set_defaults(func=cmd_compare_all)
 
     return parser
 

@@ -11,6 +11,7 @@ class OpenAIBackend(LLMBackend):
         self.model = model
         self.temperature = temperature
         self.timeout_seconds = timeout_seconds
+        self.base_url = os.getenv("OPENAI_BASE_URL") or None
 
     def generate(self, prompt: str, metadata: dict[str, Any] | None = None) -> str:
         api_key = os.getenv("OPENAI_API_KEY")
@@ -22,7 +23,10 @@ class OpenAIBackend(LLMBackend):
         except ImportError as exc:
             raise RuntimeError("openai package is not installed") from exc
 
-        client = OpenAI(api_key=api_key)
+        client_kwargs: dict[str, Any] = {"api_key": api_key}
+        if self.base_url:
+            client_kwargs["base_url"] = self.base_url
+        client = OpenAI(**client_kwargs)
         response = client.responses.create(
             model=self.model,
             input=prompt,

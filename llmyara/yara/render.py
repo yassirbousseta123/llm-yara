@@ -34,6 +34,11 @@ def render_rule(payload: dict[str, Any]) -> str:
         sid = sanitize_identifier(str(item.get("id", "s")))
         if not sid.startswith("s"):
             sid = f"s_{sid}"
+        hex_bytes = item.get("hex_bytes")
+        if isinstance(hex_bytes, str) and hex_bytes.strip():
+            string_lines.append(f"        ${sid} = {{ {hex_bytes.strip()} }}")
+            continue
+
         val = _escape_yara_string(str(item.get("value", "")))
         modifiers = []
         if item.get("ascii", True):

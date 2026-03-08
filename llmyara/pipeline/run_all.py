@@ -75,6 +75,7 @@ def run_all(
             "malware_dir": malware_dir,
             "benign_dir": benign_dir,
             "output_dir": str(Path(out_dir).resolve()),
+            "llm_cache": str((out_dir / "llm_cache.jsonl").resolve()),
         },
     )
 
@@ -83,4 +84,16 @@ def run_all(
         "families": len(splits["families"]),
         "families_with_rules": len(generation["rule_paths"]),
         "summary": eval_summary,
+        "artifacts": {
+            "manifest": str((out_dir / "manifest.jsonl").resolve()),
+            "splits": str((out_dir / "splits.json").resolve()),
+            "features": str((out_dir / "features.jsonl").resolve()),
+            "selected": str((out_dir / "selected_features.json").resolve()),
+            "generation": str((out_dir / "generation_summary.json").resolve()),
+            "llm_cache": str((out_dir / "llm_cache.jsonl").resolve()),
+            "results_csv": str((out_dir / "results_per_family.csv").resolve()),
+            "summary_json": str((out_dir / "summary.json").resolve()),
+            "summary_markdown": str((out_dir / "summary.md").resolve()),
+            "run_manifest": str((out_dir / "run_manifest.json").resolve()),
+        },
     }

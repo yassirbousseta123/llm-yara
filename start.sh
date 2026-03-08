@@ -20,6 +20,7 @@ usage() {
 Usage:
   ./start.sh --mode demo [--out /outputs/demo_run]
   ./start.sh --mode full --malware-dir /data/malware --benign-dir /data/benign [--out /outputs/final_run]
+  ./start.sh --mode full --compare-all --malware-dir /data/malware --benign-dir /data/benign [--out /outputs/final_compare]
   ./start.sh --help
 
 Notes:
@@ -34,6 +35,7 @@ MALWARE_DIR=""
 BENIGN_DIR=""
 BACKEND="${LLM_BACKEND:-mock}"
 CONFIG_PATH="$DEFAULT_CONFIG"
+COMPARE_ALL="0"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -49,6 +51,8 @@ while [[ $# -gt 0 ]]; do
       BACKEND="$2"; shift 2 ;;
     --config)
       CONFIG_PATH="$2"; shift 2 ;;
+    --compare-all)
+      COMPARE_ALL="1"; shift 1 ;;
     --help|-h)
       usage; exit 0 ;;
     *)
@@ -108,9 +112,18 @@ for p in "$MALWARE_DIR" "$BENIGN_DIR"; do
 done
 
 echo "[llmyara] mode=$MODE backend=$BACKEND malware_dir=$MALWARE_DIR benign_dir=$BENIGN_DIR out=$OUT_DIR"
-python -m llmyara.cli run-all \
-  --config "$CONFIG_PATH" \
-  --malware-dir "$MALWARE_DIR" \
-  --benign-dir "$BENIGN_DIR" \
-  --out "$OUT_DIR" \
-  --backend "$BACKEND"
+if [[ "$COMPARE_ALL" == "1" ]]; then
+  python -m llmyara.cli run-all-compare \
+    --config "$CONFIG_PATH" \
+    --malware-dir "$MALWARE_DIR" \
+    --benign-dir "$BENIGN_DIR" \
+    --out "$OUT_DIR" \
+    --backend "$BACKEND"
+else
+  python -m llmyara.cli run-all \
+    --config "$CONFIG_PATH" \
+    --malware-dir "$MALWARE_DIR" \
+    --benign-dir "$BENIGN_DIR" \
+    --out "$OUT_DIR" \
+    --backend "$BACKEND"
+fi

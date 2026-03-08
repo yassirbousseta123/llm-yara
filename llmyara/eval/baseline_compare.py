@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from baselines.apiary_static import write_baseline_rules as write_apiary_static_rules
+from baselines.autoyara_bicluster import write_baseline_rules as write_autoyara_rules
 from baselines.topstrings_baseline import write_baseline_rules as write_topstrings_rules
 from llmyara.eval.evaluate import evaluate_rules, write_results_csv
 from llmyara.eval.reports import write_summary_markdown
@@ -119,6 +120,9 @@ def evaluate_baselines(
     topstrings_max_strings: int,
     apiary_max_strings: int,
     apiary_min_score: float,
+    autoyara_max_strings: int,
+    autoyara_min_score: float,
+    autoyara_ngram_sizes: tuple[int, ...],
 ) -> dict[str, Any]:
     if not is_yara_available():
         raise RuntimeError("yara-python is required for baseline-eval. Install with .[runtime] or use Docker.")
@@ -169,7 +173,32 @@ def evaluate_baselines(
         },
     )
 
-    method_results = [topstrings_result, apiary_result]
+    autoyara_dir = ensure_dir(Path(out) / "baseline_autoyara")
+    autoyara_rules_dir = ensure_dir(autoyara_dir / "rules")
+    autoyara_rules = write_autoyara_rules(
+        manifest=manifest,
+        splits=splits,
+        out_dir=autoyara_rules_dir,
+        max_strings=autoyara_max_strings,
+        min_score=autoyara_min_score,
+        ngram_sizes=autoyara_ngram_sizes,
+    )
+    autoyara_result = _evaluate_one_method(
+        method="autoyara-bicluster",
+        status="re-implemented",
+        out_dir=autoyara_dir,
+        manifest=manifest,
+        splits=splits,
+        rule_paths=autoyara_rules["rule_paths"],
+        baseline_manifest_extra={
+            "max_strings": autoyara_max_strings,
+            "min_score": autoyara_min_score,
+            "ngram_sizes": list(autoyara_ngram_sizes),
+            "family_stats": autoyara_rules["family_stats"],
+        },
+    )
+
+    method_results = [topstrings_result, apiary_result, autoyara_result]
     comparison_rows = []
     for row in method_results:
         summary = row["summary"]

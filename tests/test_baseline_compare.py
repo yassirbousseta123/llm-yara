@@ -71,7 +71,12 @@ def test_evaluate_baselines_writes_comparison_artifacts(tmp_path: Path, monkeypa
         assert splits
         assert "fam_a" in rule_paths
         method_hint = next(iter(rule_paths.values()))
-        mean_f1 = 0.41 if "baseline_topstrings" in method_hint else 0.62
+        if "baseline_topstrings" in method_hint:
+            mean_f1 = 0.41
+        elif "baseline_apiary_static" in method_hint:
+            mean_f1 = 0.62
+        else:
+            mean_f1 = 0.73
         rows = [
             {
                 "family": "fam_a",
@@ -101,6 +106,9 @@ def test_evaluate_baselines_writes_comparison_artifacts(tmp_path: Path, monkeypa
         topstrings_max_strings=4,
         apiary_max_strings=4,
         apiary_min_score=0.0,
+        autoyara_max_strings=4,
+        autoyara_min_score=0.4,
+        autoyara_ngram_sizes=(8,),
     )
 
     comparison_csv = Path(result["comparison_csv"])
@@ -110,15 +118,18 @@ def test_evaluate_baselines_writes_comparison_artifacts(tmp_path: Path, monkeypa
 
     with comparison_csv.open("r", encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
-    assert len(rows) == 2
+    assert len(rows) == 3
     methods = {row["method"]: row for row in rows}
     assert methods["topstrings"]["status"] == "reproduced"
     assert methods["apiary-static"]["status"] == "re-implemented"
+    assert methods["autoyara-bicluster"]["status"] == "re-implemented"
 
     topstrings_manifest = out_dir / "baseline_topstrings" / "baseline_manifest.json"
     apiary_manifest = out_dir / "baseline_apiary_static" / "baseline_manifest.json"
+    autoyara_manifest = out_dir / "baseline_autoyara" / "baseline_manifest.json"
     assert topstrings_manifest.exists()
     assert apiary_manifest.exists()
+    assert autoyara_manifest.exists()
 
 
 def test_assert_split_leakage_barriers_rejects_overlap() -> None:
@@ -154,4 +165,7 @@ def test_evaluate_baselines_requires_yara(tmp_path: Path, monkeypatch: pytest.Mo
             topstrings_max_strings=8,
             apiary_max_strings=8,
             apiary_min_score=0.0,
+            autoyara_max_strings=12,
+            autoyara_min_score=0.4,
+            autoyara_ngram_sizes=(8, 16, 32),
         )

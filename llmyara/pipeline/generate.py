@@ -79,10 +79,12 @@ def generate_rules(
         top_features = [item["feature"] for item in top_items[: cfg.selection.top_k_features]]
 
         prompt = generation_prompt(family=family, top_features=top_features, max_strings=cfg.yara.max_strings)
+        prompt_source = "generated"
 
         cached = cache.get(prompt) if backend_name in {"mock", "openai"} else None
         if cached is not None:
             response = cached.response
+            prompt_source = "cache"
         else:
             response = backend.generate(prompt, metadata={"family": family, "top_features": top_features})
             if backend_name in {"mock", "openai"}:
@@ -127,6 +129,10 @@ def generate_rules(
                 "status": "rejected",
                 "reason": compile_res.error or ",".join(validation_errors),
                 "repairs": repairs,
+                "backend": backend_name,
+                "model": cfg.llm.model,
+                "prompt_source": prompt_source,
+                "top_features": top_features,
             }
             rejected_path = rules_dir / f"{family}.rejected.yar"
             rejected_path.write_text(rule_text, encoding="utf-8")
@@ -142,6 +148,10 @@ def generate_rules(
                 "reason": f"benign_dev_fpr_exceeded:{benign_fpr:.6f}",
                 "repairs": repairs,
                 "benign_dev_fpr": round(benign_fpr, 6),
+                "backend": backend_name,
+                "model": cfg.llm.model,
+                "prompt_source": prompt_source,
+                "top_features": top_features,
             }
             rejected_path = rules_dir / f"{family}.rejected.yar"
             rejected_path.write_text(rule_text, encoding="utf-8")
@@ -156,10 +166,16 @@ def generate_rules(
             "repairs": repairs,
             "benign_dev_fpr": round(benign_fpr, 6),
             "rule_path": str(rule_path),
+            "backend": backend_name,
+            "model": cfg.llm.model,
+            "prompt_source": prompt_source,
+            "top_features": top_features,
         }
 
     return {
         "backend": backend_name,
+        "model": cfg.llm.model,
+        "cache_path": str(Path(cache_path).resolve()),
         "families": family_results,
         "rule_paths": rule_paths,
     }
