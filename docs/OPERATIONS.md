@@ -16,9 +16,22 @@ Every production run should include:
 - `features.jsonl`
 - `selected_features.json`
 - `generation_summary.json`
+- `llm_cache.jsonl`
 - `results_per_family.csv`
 - `summary.json`
 - `summary.md`
+
+For research baseline comparison runs also keep:
+- `baseline_comparison.csv`
+- `baseline_comparison.json`
+- per-method `baseline_manifest.json`
+
+For final same-split comparison runs also keep:
+- `comparison/results_all_methods.csv`
+- `comparison/summary_all_methods.json`
+- `comparison/summary_all_methods.md`
+- `comparison/llmyara_llm/method_manifest.json`
+- `comparison_run_manifest.json`
 
 ## Baseline Labeling
 Use one of:
@@ -27,3 +40,8 @@ Use one of:
 - `paper-only`
 
 Never present `paper-only` metrics as directly comparable to your own split.
+
+## Recommended Final Run
+- Use `run-all-compare` for the professor-facing experiment bundle.
+- Prefer `--backend replay` after a real LLM run has been cached and frozen.
+- If using a non-OpenAI provider with compatible API semantics, set `OPENAI_BASE_URL`.

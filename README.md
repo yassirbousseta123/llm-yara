@@ -48,7 +48,18 @@ pip install -e .[runtime,ml]
   --backend mock
 ```
 
+Professor-facing comparison run:
+```bash
+./start.sh --mode full \
+  --compare-all \
+  --malware-dir /absolute/path/to/malware \
+  --benign-dir /absolute/path/to/benign \
+  --out /absolute/path/to/outputs/final_compare \
+  --backend openai
+```
+
 Use `--backend openai` only when `OPENAI_API_KEY` is set.
+Set `OPENAI_BASE_URL` if using an OpenAI-compatible local or hosted endpoint.
 
 ## CLI Reference
 ```bash
@@ -64,13 +75,19 @@ Key commands:
 - `generate`
 - `evaluate`
 - `run-all`
+- `run-all-compare`
 - `baseline-topstrings`
 - `baseline-apiary-static`
+- `baseline-autoyara`
 - `baseline-eval`
+- `compare-all`
 
 ## Baselines
 - `baseline-topstrings`: deterministic string-only baseline (`reproduced`).
 - `baseline-apiary-static`: APIARY-inspired static import discriminative baseline (`re-implemented`).
+- `baseline-autoyara`: AutoYara-inspired byte n-gram bicluster baseline (`re-implemented`).
+
+Research baseline mapping lives in [docs/paper_baseline_matrix.md](docs/paper_baseline_matrix.md).
 
 Example:
 ```bash
@@ -80,6 +97,16 @@ python -m llmyara.cli baseline-apiary-static \
   --out /absolute/path/to/outputs/baseline_apiary \
   --max-strings 8 \
   --min-score 0.0
+```
+
+```bash
+python -m llmyara.cli baseline-autoyara \
+  --manifest /absolute/path/to/manifest.jsonl \
+  --splits /absolute/path/to/splits.json \
+  --out /absolute/path/to/outputs/baseline_autoyara \
+  --ngram-sizes 8,16,32 \
+  --max-strings 12 \
+  --min-score 0.4
 ```
 
 Evaluate shipped baselines side-by-side:
@@ -92,13 +119,45 @@ python -m llmyara.cli baseline-eval \
   --out /absolute/path/to/outputs/baseline_eval \
   --topstrings-max-strings 8 \
   --apiary-max-strings 8 \
-  --apiary-min-score 0.0
+  --apiary-min-score 0.0 \
+  --autoyara-max-strings 12 \
+  --autoyara-ngram-sizes 8,16,32 \
+  --autoyara-min-score 0.4
+```
+
+Compare the primary LLM run and baselines on identical splits from existing artifacts:
+```bash
+python -m llmyara.cli compare-all \
+  --manifest /absolute/path/to/manifest.jsonl \
+  --splits /absolute/path/to/splits.json \
+  --selected /absolute/path/to/selected_features.json \
+  --features /absolute/path/to/features.jsonl \
+  --generation /absolute/path/to/generation_summary.json \
+  --out /absolute/path/to/outputs/comparison \
+  --topstrings-max-strings 8 \
+  --apiary-max-strings 8 \
+  --apiary-min-score 0.0 \
+  --autoyara-max-strings 12 \
+  --autoyara-ngram-sizes 8,16,32 \
+  --autoyara-min-score 0.4
+```
+
+Single-command final experiment flow:
+```bash
+python -m llmyara.cli run-all-compare \
+  --config configs/default.yaml \
+  --malware-dir /absolute/path/to/malware \
+  --benign-dir /absolute/path/to/benign \
+  --out /absolute/path/to/outputs/final_compare \
+  --backend openai
 ```
 
 ## Reproducibility
 - Use fixed seeds from `configs/default.yaml`.
 - Use backend `replay` for deterministic regeneration from cached responses.
 - Each run persists artifacts in one folder (`outputs/<run_id>/`).
+- `run-all-compare` writes unified all-method comparison artifacts under `comparison/`.
+- Primary runs also persist `llm_cache.jsonl` and `comparison_run_manifest.json` for replay/freeze workflows.
 
 ## Baseline Labeling Policy
 When reporting comparisons, label each method as one of:

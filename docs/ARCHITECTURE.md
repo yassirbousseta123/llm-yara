@@ -4,6 +4,7 @@ Read when:
 - adding a new pipeline stage
 - changing evaluation semantics
 - debugging reproducibility differences
+- implementing research baselines
 
 ## Principles
 - Static analysis only; no malware execution.
@@ -26,9 +27,14 @@ Read when:
 - Current shipped baselines:
   - `baseline-topstrings` (`reproduced`)
   - `baseline-apiary-static` (`re-implemented`)
+  - `baseline-autoyara` (`re-implemented`)
 - `baseline-eval` writes:
   - per-method folders with `rules/`, `baseline_manifest.json`, `results_per_family.csv`, `summary.json`, `summary.md`
   - top-level `baseline_comparison.csv` and `baseline_comparison.json`
+- `compare-all` writes:
+  - primary method folder `llmyara_llm/` with `method_manifest.json`, `results_per_family.csv`, `summary.json`, `summary.md`
+  - nested `baselines/` comparison bundle from `baseline-eval`
+  - top-level `results_all_methods.csv`, `summary_all_methods.json`, `summary_all_methods.md`
 
 ## Output Layout
 Each run writes a self-contained artifact bundle:
@@ -36,3 +42,5 @@ Each run writes a self-contained artifact bundle:
 - `manifest.jsonl`, `splits.json`, `features.jsonl`, `selected_features.json`
 - `rules/*.yar`, `generation_summary.json`
 - `results_per_family.csv`, `summary.json`, `summary.md`
+- `llm_cache.jsonl` for prompt replay/freeze
+- optional `comparison/` bundle for same-split method comparison
