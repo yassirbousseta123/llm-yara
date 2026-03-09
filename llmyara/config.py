@@ -32,12 +32,13 @@ class YaraConfig:
     max_condition_length: int = 320
     max_repairs: int = 3
     benign_dev_fpr_threshold: float = 0.02
+    min_train_target_hits: int = 1
 
 
 @dataclass(frozen=True)
 class LLMConfig:
-    model: str = "gpt-5.2-pro"
-    temperature: float = 0.0
+    model: str = "gpt-5-mini"
+    temperature: float = 1.0
     timeout_seconds: int = 90
 
 
@@ -88,10 +89,11 @@ def load_config(path: str | Path | None) -> AppConfig:
             "max_condition_length": 320,
             "max_repairs": 3,
             "benign_dev_fpr_threshold": 0.02,
+            "min_train_target_hits": 1,
         },
         "llm": {
-            "model": "gpt-5.2-pro",
-            "temperature": 0.0,
+            "model": "gpt-5-mini",
+            "temperature": 1.0,
             "timeout_seconds": 90,
         },
         "runtime": {

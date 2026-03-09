@@ -32,3 +32,19 @@ def test_split_disjointness() -> None:
     benign_dev = set(splits["global"]["benign_dev"])
     benign_test = set(splits["global"]["benign_test"])
     assert benign_dev.isdisjoint(benign_test)
+
+
+def test_splits_deduplicate_duplicate_sample_ids() -> None:
+    manifest = _manifest() + [
+        {"sample_id": "A0", "source": "malware", "family": "fam_a"},
+        {"sample_id": "G0", "source": "benign", "family": "benign"},
+    ]
+
+    splits = build_splits(manifest, seed=7, test_ratio=0.3, benign_dev_ratio=0.6, min_family_size=6)
+
+    fam_a_ids = set(splits["families"]["fam_a"]["train_target"]) | set(splits["families"]["fam_a"]["test_target"])
+    benign_ids = set(splits["global"]["benign_dev"]) | set(splits["global"]["benign_test"])
+
+    assert len(fam_a_ids) == 10
+    assert len(benign_ids) == 12
+    assert set(splits["global"]["benign_dev"]).isdisjoint(set(splits["global"]["benign_test"]))

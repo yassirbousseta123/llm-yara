@@ -4,6 +4,15 @@ from pathlib import Path
 from typing import Any
 
 
+def _normalize_section_name(raw_name: str) -> str:
+    cleaned = "".join(ch for ch in raw_name if 0x20 <= ord(ch) <= 0x7E).strip().lower()
+    if not cleaned:
+        return ""
+    if not any(ch.isalnum() for ch in cleaned):
+        return ""
+    return cleaned
+
+
 def extract_pe_metadata(path: str | Path) -> dict[str, Any]:
     try:
         import pefile  # type: ignore
@@ -17,7 +26,7 @@ def extract_pe_metadata(path: str | Path) -> dict[str, Any]:
 
     sections: list[str] = []
     for section in getattr(pe, "sections", []) or []:
-        name = section.Name.decode(errors="ignore").strip("\x00").lower()
+        name = _normalize_section_name(section.Name.decode(errors="ignore"))
         if name:
             sections.append(name)
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from llmyara.selection.vectorize import fallback_rank, join_tokens
+from llmyara.selection.vectorize import fallback_rank
 
 
 def select_family_features(
@@ -25,13 +25,18 @@ def select_family_features(
     except ImportError:
         return fallback_rank(pos_docs, neg_docs, top_k)
 
-    all_docs = join_tokens(pos_docs + neg_docs)
+    all_docs = pos_docs + neg_docs
     labels = [1] * len(pos_docs) + [0] * len(neg_docs)
 
     if len(set(labels)) < 2:
         return fallback_rank(pos_docs, neg_docs, top_k)
 
-    vectorizer = TfidfVectorizer(token_pattern=r"[^ ]+", lowercase=False)
+    vectorizer = TfidfVectorizer(
+        analyzer=lambda doc: doc,
+        lowercase=False,
+        preprocessor=None,
+        token_pattern=None,
+    )
     matrix = vectorizer.fit_transform(all_docs)
     scores, _ = chi2(matrix, labels)
     vocab = vectorizer.get_feature_names_out()

@@ -18,7 +18,25 @@ def _escape_yara_string(value: str) -> str:
     return escaped
 
 
+def _normalize_string_value(value: str) -> str:
+    if value.startswith("str:"):
+        return value[4:]
+    return value
+
+
+def _string_to_hex_bytes(value: str) -> str | None:
+    if any(ord(ch) < 0x20 or ord(ch) == 0x7F for ch in value):
+        return " ".join(f"{byte:02X}" for byte in value.encode("utf-8"))
+    return None
+
+
 def render_rule(payload: dict[str, Any]) -> str:
+    for key in ("fixed_rule", "repaired_rule", "rule_text", "yara_rule"):
+        raw_rule = payload.get(key)
+        if isinstance(raw_rule, str) and raw_rule.strip():
+            text = raw_rule.strip()
+            return f"{text}\n"
+
     rule_name = sanitize_identifier(str(payload.get("rule_name", "llmyara_rule")))
     meta = payload.get("meta", {}) or {}
     strings = payload.get("strings", []) or []
@@ -32,14 +50,18 @@ def render_rule(payload: dict[str, Any]) -> str:
     string_lines = []
     for item in strings:
         sid = sanitize_identifier(str(item.get("id", "s")))
-        if not sid.startswith("s"):
-            sid = f"s_{sid}"
         hex_bytes = item.get("hex_bytes")
         if isinstance(hex_bytes, str) and hex_bytes.strip():
             string_lines.append(f"        ${sid} = {{ {hex_bytes.strip()} }}")
             continue
 
-        val = _escape_yara_string(str(item.get("value", "")))
+        raw_value = _normalize_string_value(str(item.get("value", "")))
+        derived_hex = _string_to_hex_bytes(raw_value)
+        if derived_hex:
+            string_lines.append(f"        ${sid} = {{ {derived_hex} }}")
+            continue
+
+        val = _escape_yara_string(raw_value)
         modifiers = []
         if item.get("ascii", True):
             modifiers.append("ascii")
@@ -50,7 +72,11 @@ def render_rule(payload: dict[str, Any]) -> str:
         mods = " ".join(modifiers)
         string_lines.append(f'        ${sid} = "{val}" {mods}'.rstrip())
 
-    return "\n".join(
+    lines = []
+    if "pe." in condition:
+        lines.append('import "pe"')
+        lines.append("")
+    lines.extend(
         [
             f"rule {rule_name} {{",
             "    meta:",
@@ -63,3 +89,4 @@ def render_rule(payload: dict[str, Any]) -> str:
             "",
         ]
     )
+    return "\n".join(lines)

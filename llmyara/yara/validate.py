@@ -27,6 +27,8 @@ def validate_rule_text(rule_text: str, constraints: RuleConstraints) -> list[str
         condition_text = rule_text[idx + len(cond_marker):].strip()
         if len(condition_text) > constraints.max_condition_length:
             errors.append("condition_too_long")
+        if condition_text == "false":
+            errors.append("always_false_condition")
 
     if "strings:" in rule_text and not string_lines:
         errors.append("no_strings_declared")

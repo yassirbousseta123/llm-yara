@@ -13,6 +13,16 @@ class OpenAIBackend(LLMBackend):
         self.timeout_seconds = timeout_seconds
         self.base_url = os.getenv("OPENAI_BASE_URL") or None
 
+    def _request_kwargs(self) -> dict[str, Any]:
+        kwargs: dict[str, Any] = {
+            "model": self.model,
+            "timeout": self.timeout_seconds,
+        }
+        # Older GPT-5 family models reject temperature overrides; use server defaults.
+        if not self.model.startswith("gpt-5"):
+            kwargs["temperature"] = self.temperature
+        return kwargs
+
     def generate(self, prompt: str, metadata: dict[str, Any] | None = None) -> str:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
@@ -27,23 +37,50 @@ class OpenAIBackend(LLMBackend):
         if self.base_url:
             client_kwargs["base_url"] = self.base_url
         client = OpenAI(**client_kwargs)
-        response = client.responses.create(
-            model=self.model,
-            input=prompt,
-            temperature=self.temperature,
-            timeout=self.timeout_seconds,
-        )
-        text = getattr(response, "output_text", None)
-        if text:
-            return text
+        request_kwargs = self._request_kwargs()
+        responses_api = getattr(client, "responses", None)
+        if responses_api is not None:
+            response = responses_api.create(
+                input=prompt,
+                **request_kwargs,
+            )
+            text = getattr(response, "output_text", None)
+            if text:
+                return text
 
-        # Fallback parse for clients without output_text convenience.
-        parts: list[str] = []
-        for item in getattr(response, "output", []) or []:
-            for content in getattr(item, "content", []) or []:
-                text_value = getattr(content, "text", None)
+            parts: list[str] = []
+            for item in getattr(response, "output", []) or []:
+                for content in getattr(item, "content", []) or []:
+                    text_value = getattr(content, "text", None)
+                    if text_value:
+                        parts.append(text_value)
+            if parts:
+                return "\n".join(parts)
+
+        chat_api = getattr(getattr(client, "chat", None), "completions", None)
+        if chat_api is None:
+            raise RuntimeError("OpenAI client missing responses and chat.completions APIs")
+
+        response = chat_api.create(
+            messages=[{"role": "user", "content": prompt}],
+            **request_kwargs,
+        )
+        choices = getattr(response, "choices", None) or []
+        if not choices:
+            raise RuntimeError("OpenAI chat completion did not contain choices")
+        message = getattr(choices[0], "message", None)
+        content = getattr(message, "content", None) if message else None
+        if isinstance(content, str) and content:
+            return content
+        if isinstance(content, list):
+            parts = []
+            for item in content:
+                if isinstance(item, dict):
+                    text_value = item.get("text")
+                else:
+                    text_value = getattr(item, "text", None)
                 if text_value:
-                    parts.append(text_value)
-        if not parts:
-            raise RuntimeError("OpenAI response did not contain text output")
-        return "\n".join(parts)
+                    parts.append(str(text_value))
+            if parts:
+                return "\n".join(parts)
+        raise RuntimeError("OpenAI chat completion did not contain text output")

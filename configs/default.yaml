@@ -14,9 +14,10 @@ yara:
   max_condition_length: 320
   max_repairs: 3
   benign_dev_fpr_threshold: 0.02
+  min_train_target_hits: 1
 llm:
-  model: gpt-5.2-pro
-  temperature: 0.0
+  model: gpt-5-mini
+  temperature: 1.0
   timeout_seconds: 90
 runtime:
   workers: 1

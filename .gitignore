@@ -24,6 +24,8 @@ cache/
 
 # Env/editor
 .env
+.openai_key
+.venv312/
 .DS_Store
 .vscode/
 .idea/

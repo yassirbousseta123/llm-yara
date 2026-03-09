@@ -138,6 +138,24 @@ def generate_rules(
             rejected_path.write_text(rule_text, encoding="utf-8")
             continue
 
+        train_target_paths = _lookup_paths(manifest, splits["families"][family]["train_target"])
+        train_scan = scan_rule(rule_text, train_target_paths)
+        train_target_hits = len(train_scan.matches)
+        if train_target_paths and train_target_hits < cfg.yara.min_train_target_hits:
+            family_results[family] = {
+                "status": "rejected",
+                "reason": f"train_target_hits_below_min:{train_target_hits}<{cfg.yara.min_train_target_hits}",
+                "repairs": repairs,
+                "train_target_hits": train_target_hits,
+                "backend": backend_name,
+                "model": cfg.llm.model,
+                "prompt_source": prompt_source,
+                "top_features": top_features,
+            }
+            rejected_path = rules_dir / f"{family}.rejected.yar"
+            rejected_path.write_text(rule_text, encoding="utf-8")
+            continue
+
         benign_paths = _lookup_paths(manifest, splits["global"]["benign_dev"])
         scan = scan_rule(rule_text, benign_paths)
         benign_fpr = len(scan.matches) / len(benign_paths) if benign_paths else 0.0
@@ -148,6 +166,7 @@ def generate_rules(
                 "reason": f"benign_dev_fpr_exceeded:{benign_fpr:.6f}",
                 "repairs": repairs,
                 "benign_dev_fpr": round(benign_fpr, 6),
+                "train_target_hits": train_target_hits,
                 "backend": backend_name,
                 "model": cfg.llm.model,
                 "prompt_source": prompt_source,
@@ -165,6 +184,7 @@ def generate_rules(
             "status": "accepted",
             "repairs": repairs,
             "benign_dev_fpr": round(benign_fpr, 6),
+            "train_target_hits": train_target_hits,
             "rule_path": str(rule_path),
             "backend": backend_name,
             "model": cfg.llm.model,
