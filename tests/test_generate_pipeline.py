@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
-from llmyara.config import AppConfig
+from llmyara.config import AppConfig, YaraConfig
 from llmyara.pipeline import generate as generate_mod
 
 
@@ -55,8 +56,8 @@ def test_generate_rules_repairs_after_initial_compile_failure(
 ) -> None:
     backend = _FakeBackend(
         [
-            '{"rule_name":"llmyara_fam_a","meta":{"family":"fam_a","author":"x","description":"x"},"strings":[{"id":"s1","value":"abcd","ascii":true,"wide":false,"nocase":true}],"condition":"invalid syntax"}',
-            '{"rule_name":"llmyara_fam_a","meta":{"family":"fam_a","author":"x","description":"x"},"strings":[{"id":"s1","value":"abcd","ascii":true,"wide":false,"nocase":true}],"condition":"$s1"}',
+            '{"rule_text":"rule broken { condition: invalid syntax }"}',
+            '{"rule_name":"llmyara_fam_a","meta":{"family":"fam_a","author":"x","description":"x"},"strings":[{"id":"s1","value":"abcd","ascii":true,"wide":false,"nocase":true}],"min_strings":1}',
         ]
     )
     monkeypatch.setattr(generate_mod, "build_backend", lambda name, cfg, cache: backend)
@@ -65,7 +66,7 @@ def test_generate_rules_repairs_after_initial_compile_failure(
 
     def fake_compile(rule_text: str) -> object:
         compile_calls["count"] += 1
-        ok = "condition:\n        $s1" in rule_text
+        ok = "all of them" in rule_text
         error = None if ok else "syntax error"
         return type("Compile", (), {"ok": ok, "error": error})()
 
@@ -136,7 +137,7 @@ def test_generate_rules_accepts_repaired_rule_repairs(
     backend = _FakeBackend(
         [
             '{"rule_name":"llmyara_fam_a","meta":{"family":"fam_a","author":"x","description":"x"},"strings":[{"id":"a1","value":"abcd","ascii":true,"wide":false,"nocase":true}],"condition":"$missing"}',
-            '{"repaired_rule":"rule llmyara_fam_a {\\n    meta:\\n        family = \\"fam_a\\"\\n    condition:\\n        false\\n}"}',
+            '{"repaired_rule":"rule llmyara_fam_a {\\n    meta:\\n        family = \\"fam_a\\"\\n    strings:\\n        $a1 = \\"abcd\\" ascii nocase\\n    condition:\\n        $a1\\n}"}',
         ]
     )
     monkeypatch.setattr(generate_mod, "build_backend", lambda name, cfg, cache: backend)
@@ -169,7 +170,7 @@ def test_generate_rules_accepts_repaired_rule_repairs(
     family = result["families"]["fam_a"]
     assert family["status"] == "accepted"
     assert family["repairs"] == 1
-    assert "condition:\n        false" in Path(family["rule_path"]).read_text(encoding="utf-8")
+    assert "condition:\n        $a1" in Path(family["rule_path"]).read_text(encoding="utf-8")
 
 
 def test_generate_rules_rejects_when_train_target_hits_are_zero(
@@ -184,10 +185,12 @@ def test_generate_rules_rejects_when_train_target_hits_are_zero(
     monkeypatch.setattr(generate_mod, "compile_rule", lambda rule_text: type("Compile", (), {"ok": True, "error": None})())
 
     def fake_scan(rule_text: str, file_paths: list[str]) -> object:
-        matches = [] if "target-hit" in ",".join(file_paths) else []
+        matches: list[str] = []
         return type("Scan", (), {"matches": matches, "elapsed_seconds": 0.0})()
 
     monkeypatch.setattr(generate_mod, "scan_rule", fake_scan)
+
+    cfg = replace(_cfg(), yara=YaraConfig(min_train_target_hits=1, max_repairs=0))
 
     result = generate_mod.generate_rules(
         manifest=[
@@ -199,7 +202,7 @@ def test_generate_rules_rejects_when_train_target_hits_are_zero(
             "global": {"benign_dev": ["b1"]},
         },
         selected={"families": {"fam_a": [{"feature": "str:abcd", "score": 1.0}]}},
-        cfg=_cfg(),
+        cfg=cfg,
         backend_name="mock",
         out_dir=tmp_path,
         cache_path=tmp_path / "llm_cache.jsonl",
@@ -208,3 +211,100 @@ def test_generate_rules_rejects_when_train_target_hits_are_zero(
     family = result["families"]["fam_a"]
     assert family["status"] == "rejected"
     assert family["reason"] == "train_target_hits_below_min:0<1"
+
+
+def test_generate_rules_repairs_after_semantic_train_hit_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    backend = _FakeBackend(
+        [
+            '{"rule_name":"llmyara_fam_a","meta":{"family":"fam_a","author":"x","description":"x"},"strings":[{"id":"a1","value":"str:weak_signal","ascii":true,"wide":false,"nocase":true}],"condition":"$a1"}',
+            '{"fixed_rule":"rule llmyara_fam_a {\\n    meta:\\n        family = \\"fam_a\\"\\n    strings:\\n        $a1 = \\"weak_signal\\" ascii nocase\\n        $a2 = \\"strong_signal\\" ascii nocase\\n    condition:\\n        $a1 and $a2\\n}"}',
+        ]
+    )
+    monkeypatch.setattr(generate_mod, "build_backend", lambda name, cfg, cache: backend)
+    monkeypatch.setattr(generate_mod, "compile_rule", lambda rule_text: type("Compile", (), {"ok": True, "error": None})())
+
+    def fake_scan(rule_text: str, file_paths: list[str]) -> object:
+        if "target.bin" in ",".join(file_paths):
+            matches = file_paths if "$a2" in rule_text else []
+        else:
+            matches = []
+        return type("Scan", (), {"matches": matches, "elapsed_seconds": 0.0})()
+
+    monkeypatch.setattr(generate_mod, "scan_rule", fake_scan)
+
+    result = generate_mod.generate_rules(
+        manifest=[
+            {"sample_id": "t1", "path": str(tmp_path / "target.bin")},
+            {"sample_id": "b1", "path": str(tmp_path / "benign.bin")},
+        ],
+        splits={
+            "families": {"fam_a": {"train_target": ["t1"], "test_target": [], "train_other": [], "test_other": []}},
+            "global": {"benign_dev": ["b1"]},
+        },
+        selected={
+            "families": {
+                "fam_a": [
+                    {"feature": "str:weak_signal", "score": 2.0},
+                    {"feature": "str:strong_signal", "score": 1.0},
+                ]
+            }
+        },
+        cfg=_cfg(),
+        backend_name="mock",
+        out_dir=tmp_path,
+        cache_path=tmp_path / "llm_cache.jsonl",
+    )
+
+    family = result["families"]["fam_a"]
+    assert family["status"] == "accepted"
+    assert family["repairs"] == 1
+    assert family["train_target_hits"] == 1
+
+
+def test_curate_prompt_features_prefers_supported_high_signal_tokens() -> None:
+    curated = generate_mod._curate_prompt_features(
+        [
+            "imphash:abc",
+            "sec_count:5",
+            "imp:kernel32.dll!sleep",
+            "sec:.text",
+            "sec:   ",
+            "str:no link",
+            "str:%temp%\\\\dropper.exe",
+            "str:this program cannot be run in dos mode.",
+        ],
+        max_features=6,
+    )
+
+    assert curated == [
+        "imp:kernel32.dll!sleep",
+        "sec:.text",
+        "str:%temp%\\\\dropper.exe",
+    ]
+
+
+def test_normalize_candidate_payload_filters_to_allowed_signals() -> None:
+    payload = generate_mod._normalize_candidate_payload(
+        payload={
+            "rule_name": "candidate",
+            "meta": {"author": "x", "description": "x"},
+            "strings": [
+                {"id": "s1", "value": "str:keep_me", "ascii": True, "wide": False, "nocase": True},
+                {"id": "s2", "value": "str:drop_me", "ascii": True, "wide": False, "nocase": True},
+            ],
+            "imports": ["imp:kernel32.dll!sleep", "imp:user32.dll!messageboxa"],
+            "sections": ["sec:.text", "sec:.bad section"],
+            "min_strings": 1,
+            "import_mode": "all",
+        },
+        family="fam_a",
+        top_features=["str:keep_me", "imp:kernel32.dll!sleep", "sec:.text"],
+        max_strings=10,
+    )
+
+    assert payload["auto_condition"] is True
+    assert [item["value"] for item in payload["strings"]] == ["keep_me"]
+    assert payload["imports"] == ["kernel32.dll!sleep"]
+    assert payload["sections"] == [".text"]

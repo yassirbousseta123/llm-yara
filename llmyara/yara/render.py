@@ -30,6 +30,87 @@ def _string_to_hex_bytes(value: str) -> str | None:
     return None
 
 
+def _normalize_import_token(value: Any) -> str | None:
+    if isinstance(value, dict):
+        dll = str(value.get("dll", "")).strip().lower()
+        func = str(value.get("function", value.get("name", ""))).strip().lower()
+        if dll and func:
+            return f"{dll}!{func}"
+        return None
+
+    text = str(value).strip().lower()
+    if text.startswith("imp:"):
+        text = text[4:]
+    if "!" not in text:
+        return None
+    dll, func = text.split("!", 1)
+    if not dll or not func:
+        return None
+    return f"{dll}!{func}"
+
+
+def _normalize_section_name(value: Any) -> str | None:
+    text = str(value).strip()
+    if text.startswith("sec:"):
+        text = text[4:].strip()
+    if not re.fullmatch(r"[A-Za-z0-9._-]{1,16}", text):
+        return None
+    return text
+
+
+def _clamp_match_count(value: Any, size: int) -> int:
+    if size <= 0:
+        return 0
+    try:
+        count = int(value)
+    except (TypeError, ValueError):
+        count = 2 if size >= 2 else 1
+    return max(1, min(size, count))
+
+
+def _build_auto_condition(payload: dict[str, Any], string_count: int) -> str:
+    imports = []
+    for item in payload.get("imports", []) or []:
+        token = _normalize_import_token(item)
+        if token is not None:
+            imports.append(token)
+
+    sections = []
+    for item in payload.get("sections", []) or []:
+        name = _normalize_section_name(item)
+        if name is not None:
+            sections.append(name)
+
+    clauses: list[str] = []
+    if imports or sections or payload.get("require_pe"):
+        clauses.append("uint16(0) == 0x5A4D")
+
+    if imports:
+        expressions = []
+        for token in dict.fromkeys(imports):
+            dll, func = token.split("!", 1)
+            expressions.append(f'pe.imports("{_escape_yara_string(dll)}", "{_escape_yara_string(func)}")')
+
+        import_mode = str(payload.get("import_mode", "any")).strip().lower()
+        joiner = " and " if import_mode == "all" else " or "
+        clauses.append(f"({joiner.join(expressions)})")
+
+    if sections:
+        section_checks = " or ".join(
+            f'pe.sections[i].name == "{_escape_yara_string(name)}"' for name in dict.fromkeys(sections)
+        )
+        clauses.append(f"for any i in (0..pe.number_of_sections - 1) : ( {section_checks} )")
+
+    if string_count > 0:
+        min_strings = _clamp_match_count(payload.get("min_strings"), string_count)
+        if min_strings >= string_count:
+            clauses.append("all of them")
+        else:
+            clauses.append(f"{min_strings} of them")
+
+    return " and ".join(clauses) if clauses else str(payload.get("condition", "false"))
+
+
 def render_rule(payload: dict[str, Any]) -> str:
     for key in ("fixed_rule", "repaired_rule", "rule_text", "yara_rule"):
         raw_rule = payload.get(key)
@@ -40,7 +121,7 @@ def render_rule(payload: dict[str, Any]) -> str:
     rule_name = sanitize_identifier(str(payload.get("rule_name", "llmyara_rule")))
     meta = payload.get("meta", {}) or {}
     strings = payload.get("strings", []) or []
-    condition = str(payload.get("condition", "false"))
+    condition = _build_auto_condition(payload, len(strings)) if payload.get("auto_condition") else str(payload.get("condition", "false"))
 
     meta_lines = []
     for key, value in sorted(meta.items()):

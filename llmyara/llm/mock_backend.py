@@ -13,8 +13,14 @@ class MockBackend(LLMBackend):
         features: list[str] = metadata.get("top_features", [])
 
         selected: list[str] = []
+        imports: list[str] = []
+        sections: list[str] = []
         for token in features:
-            if token.startswith("str:"):
+            if token.startswith("imp:"):
+                imports.append(token[4:])
+            elif token.startswith("sec:"):
+                sections.append(token[4:])
+            elif token.startswith("str:"):
                 val = token[4:]
                 if 4 <= len(val) <= 40 and all(c.isprintable() for c in val):
                     selected.append(val)
@@ -41,6 +47,9 @@ class MockBackend(LLMBackend):
                 }
                 for i, val in enumerate(selected)
             ],
-            "condition": "2 of them" if len(selected) >= 2 else "$s1",
+            "imports": imports[:2],
+            "sections": sections[:1],
+            "min_strings": 2 if len(selected) >= 2 else 1,
+            "import_mode": "any",
         }
         return json.dumps(payload, ensure_ascii=True)

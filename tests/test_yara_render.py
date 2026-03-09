@@ -68,3 +68,23 @@ def test_render_rule_adds_pe_import_when_condition_uses_pe_module() -> None:
     )
 
     assert rule.startswith('import "pe"\n\nrule pe_rule')
+
+
+def test_render_rule_builds_condition_from_structured_payload() -> None:
+    rule = render_rule(
+        {
+            "rule_name": "auto_rule",
+            "meta": {"family": "fam_a"},
+            "strings": [{"id": "a1", "value": "mutex_red", "ascii": True, "wide": False, "nocase": True}],
+            "imports": ["kernel32.dll!sleep"],
+            "sections": [".text"],
+            "min_strings": 1,
+            "import_mode": "all",
+            "auto_condition": True,
+        }
+    )
+
+    assert rule.startswith('import "pe"\n\nrule auto_rule')
+    assert 'pe.imports("kernel32.dll", "sleep")' in rule
+    assert 'pe.sections[i].name == ".text"' in rule
+    assert "uint16(0) == 0x5A4D" in rule
