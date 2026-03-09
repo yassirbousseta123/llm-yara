@@ -308,3 +308,19 @@ def test_normalize_candidate_payload_filters_to_allowed_signals() -> None:
     assert [item["value"] for item in payload["strings"]] == ["keep_me"]
     assert payload["imports"] == ["kernel32.dll!sleep"]
     assert payload["sections"] == [".text"]
+
+
+def test_normalize_candidate_payload_accepts_raw_string_lists() -> None:
+    payload = generate_mod._normalize_candidate_payload(
+        payload={
+            "strings": ["keep_me", "drop_me"],
+            "imports": ["kernel32.dll!sleep"],
+            "min_strings": 1,
+        },
+        family="fam_a",
+        top_features=["str:keep_me", "imp:kernel32.dll!sleep"],
+        max_strings=10,
+    )
+
+    assert [item["value"] for item in payload["strings"]] == ["keep_me"]
+    assert payload["imports"] == ["kernel32.dll!sleep"]

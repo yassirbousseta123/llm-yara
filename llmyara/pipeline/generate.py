@@ -141,7 +141,20 @@ def _normalize_candidate_payload(payload: dict[str, Any], family: str, top_featu
 
     normalized_strings: list[dict[str, Any]] = []
     for index, item in enumerate(payload.get("strings", []) or [], start=1):
-        value = _normalize_signal_token(item.get("value", ""), "str:")
+        if isinstance(item, dict):
+            raw_value = item.get("value", "")
+            sid = str(item.get("id", f"s{index}"))
+            ascii_flag = bool(item.get("ascii", True))
+            wide_flag = bool(item.get("wide", False))
+            nocase_flag = bool(item.get("nocase", True))
+        else:
+            raw_value = item
+            sid = f"s{index}"
+            ascii_flag = True
+            wide_flag = False
+            nocase_flag = True
+
+        value = _normalize_signal_token(raw_value, "str:")
         if value is None:
             continue
         if allowed_string_set and value not in allowed_string_set:
@@ -155,11 +168,11 @@ def _normalize_candidate_payload(payload: dict[str, Any], family: str, top_featu
                 continue
         normalized_strings.append(
             {
-                "id": str(item.get("id", f"s{index}")),
+                "id": sid,
                 "value": value,
-                "ascii": bool(item.get("ascii", True)),
-                "wide": bool(item.get("wide", False)),
-                "nocase": bool(item.get("nocase", True)),
+                "ascii": ascii_flag,
+                "wide": wide_flag,
+                "nocase": nocase_flag,
             }
         )
 
