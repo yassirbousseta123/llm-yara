@@ -33,6 +33,12 @@ Build a production-grade, reproducible LLM-YARA system with deterministic data h
 - [x] Add replay/freeze-friendly run manifest for `run-all-compare`.
 - [x] Add OpenAI-compatible `OPENAI_BASE_URL` support.
 - [x] Add generation pipeline unit coverage for fallback/repair flow.
+- [x] Fix OpenAI backend compatibility for live `gpt-5-mini` runs.
+- [x] Preserve full feature tokens during selection (no whitespace-fragment ranking).
+- [x] Normalize renderer handling for `str:` strings, null-byte strings, and `pe` module conditions.
+- [x] Add semantic generation gates: reject always-false rules and require training-target hits.
+- [x] Normalize PE section names before tokenization.
+- [x] Validate real smoke run with `run-all-compare --backend openai`.
 
 ## Validation Notes
 - Initial `pytest -q` failed due local import path setup: `ModuleNotFoundError: No module named 'llmyara'`.
@@ -41,10 +47,13 @@ Build a production-grade, reproducible LLM-YARA system with deterministic data h
 - Baseline contract updated in `docs/ARCHITECTURE.md`.
 - CLI sanity check passed: `python -m llmyara.cli --help` lists `baseline-apiary-static`, `baseline-autoyara`, `compare-all`, and `run-all-compare`.
 - `baseline-eval --help` validated expected inputs and options.
-- Current suite status: `PYTHONPATH=. pytest -q` -> `27 passed`.
+- Current suite status: `PYTHONPATH=. pytest -q` -> `40 passed`.
+- Live smoke bundle validated at `outputs/final_motif_smoke_openai_v5/`.
+- Smoke outcome after semantic gating: infrastructure passes; weak LLM rules are correctly rejected instead of being counted as valid output.
 
 ## Quality Gates
 - Deterministic outputs for fixed inputs.
 - No use of test sets in baseline feature scoring.
 - YARA rule render path uses existing safe renderer.
+- Accepted LLM rules must compile, stay below benign-dev FPR threshold, and hit training-target samples.
 - No destructive git operations; no secret material committed.

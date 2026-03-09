@@ -9,6 +9,11 @@ Read when:
 - `demo`: synthetic dataset, zero external dependencies.
 - `full`: real dataset directories provided by operator.
 
+## Runtime Environment
+- Prefer Docker or an isolated Python virtualenv for local full runs.
+- Avoid shared scientific/conda environments for `runtime,ml` installs; compiled wheel ABI conflicts can break `numpy`, `pandas`, or `scikit-learn`.
+- Keep secrets outside git; `.openai_key` is local-only and ignored.
+
 ## Mandatory Artifacts
 Every production run should include:
 - `manifest.jsonl`
@@ -45,3 +50,9 @@ Never present `paper-only` metrics as directly comparable to your own split.
 - Use `run-all-compare` for the professor-facing experiment bundle.
 - Prefer `--backend replay` after a real LLM run has been cached and frozen.
 - If using a non-OpenAI provider with compatible API semantics, set `OPENAI_BASE_URL`.
+- Run a small smoke subset first with the real backend before the full dataset.
+
+## Acceptance Triage
+- If a family is rejected with `train_target_hits_below_min`, the rule is syntactically valid but semantically useless; improve features/prompting before rerunning full experiments.
+- If a family is rejected with `benign_dev_fpr_exceeded`, the rule is too broad; tighten signal quality or condition structure.
+- Do not report compile-only or always-false rules as successful generations.

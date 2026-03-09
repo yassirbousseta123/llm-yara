@@ -11,6 +11,7 @@ Read when:
 - Deterministic outputs for a fixed config and cache.
 - Explicit leakage barriers between dev and test sets.
 - Bounded LLM repair loop; never unbounded generation.
+- Semantic acceptance gates; compile-only rules are not enough.
 
 ## Pipeline Contract
 1. `index`: Build manifest with `sha256`, label, source, path metadata.
@@ -20,6 +21,19 @@ Read when:
 5. `generate`: LLM JSON -> YARA template -> compile/repair/gates.
 6. `evaluate`: Report family-level and aggregate metrics.
 7. `report`: Persist machine-readable and human-readable artifacts.
+
+## Generation Acceptance Contract
+- Candidate rules must compile and pass structural validation.
+- Candidate rules must hit training-target samples before they can be accepted.
+- Candidate rules must stay below the configured `benign_dev` false-positive threshold.
+- `condition: false` is invalid, even if it compiles.
+- Repair payloads may return full YARA text (`fixed_rule`, `repaired_rule`, `rule_text`, `yara_rule`) and the renderer must preserve it.
+
+## Feature Contract
+- Selection operates on full extracted tokens, not whitespace-split fragments.
+- `str:` tokens represent literal file strings and are rendered without the `str:` prefix.
+- `imp:` and `sec:` tokens are signals for reasoning and condition building, not literal strings.
+- Section names are normalized to printable, non-empty identifiers before tokenization.
 
 ## Baseline Contract
 - Baselines write one YARA file per family plus `baseline_manifest.json`.

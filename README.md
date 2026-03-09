@@ -13,6 +13,7 @@ A production-oriented pipeline for generating and evaluating YARA rules from mal
   - `index -> split -> extract -> select -> generate -> evaluate`
 - Bounded compile-repair loop for rule validity.
 - Explicit leakage control: `benign_dev` for gating, `benign_test` for final FPR.
+- LLM rule acceptance is semantic, not syntax-only: accepted rules must compile, stay below the benign-dev threshold, and hit training-target samples.
 - Dockerized execution with `start.sh`.
 
 ## Project Layout
@@ -38,6 +39,8 @@ pip install -e .[dev]
 pip install -e .[runtime,ml]
 ./start.sh --mode demo
 ```
+
+Use an isolated virtualenv for local runtime work. Shared conda/scientific environments can break compiled dependencies used by `runtime,ml`.
 
 ## Full Run (Local)
 ```bash
@@ -238,3 +241,4 @@ Avoid presenting `paper-only` results as directly comparable to your own split.
 - Current feature set is static PE-oriented.
 - Non-PE files are safely skipped for PE-specific fields.
 - LLM quality depends on selected features and model availability.
+- Token ranking preserves full extracted features, including strings that contain spaces.
