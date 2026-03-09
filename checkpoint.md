@@ -39,6 +39,8 @@ Build a production-grade, reproducible LLM-YARA system with deterministic data h
 - [x] Add semantic generation gates: reject always-false rules and require training-target hits.
 - [x] Normalize PE section names before tokenization.
 - [x] Validate real smoke run with `run-all-compare --backend openai`.
+- [x] Shift LLM generation to structured signal selection with deterministic condition rendering.
+- [x] Ground model payloads back to allowed selected signals before rendering.
 
 ## Validation Notes
 - Initial `pytest -q` failed due local import path setup: `ModuleNotFoundError: No module named 'llmyara'`.
@@ -48,8 +50,13 @@ Build a production-grade, reproducible LLM-YARA system with deterministic data h
 - CLI sanity check passed: `python -m llmyara.cli --help` lists `baseline-apiary-static`, `baseline-autoyara`, `compare-all`, and `run-all-compare`.
 - `baseline-eval --help` validated expected inputs and options.
 - Current suite status: `PYTHONPATH=. pytest -q` -> `40 passed`.
-- Live smoke bundle validated at `outputs/final_motif_smoke_openai_v5/`.
-- Smoke outcome after semantic gating: infrastructure passes; weak LLM rules are correctly rejected instead of being counted as valid output.
+- Live smoke bundle validated at `outputs/final_motif_smoke_openai_v8/`.
+- Smoke outcome after structured generation hardening:
+  - accepted families: `4/5`
+  - mean F1: `0.242857`
+  - mean target TPR: `0.1875`
+  - mean benign FPR: `0.0`
+  - current LLM path now beats `topstrings` on the smoke subset, but still trails `apiary-static` and `autoyara-bicluster`.
 
 ## Quality Gates
 - Deterministic outputs for fixed inputs.

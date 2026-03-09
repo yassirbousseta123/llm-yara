@@ -47,7 +47,7 @@ Use one of:
 Never present `paper-only` metrics as directly comparable to your own split.
 
 ## Recommended Final Run
-- Use `run-all-compare` for the professor-facing experiment bundle.
+- Use `run-all-compare` for the final comparison bundle.
 - Prefer `--backend replay` after a real LLM run has been cached and frozen.
 - If using a non-OpenAI provider with compatible API semantics, set `OPENAI_BASE_URL`.
 - Run a small smoke subset first with the real backend before the full dataset.

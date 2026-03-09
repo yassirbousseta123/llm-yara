@@ -14,6 +14,7 @@ A production-oriented pipeline for generating and evaluating YARA rules from mal
 - Bounded compile-repair loop for rule validity.
 - Explicit leakage control: `benign_dev` for gating, `benign_test` for final FPR.
 - LLM rule acceptance is semantic, not syntax-only: accepted rules must compile, stay below the benign-dev threshold, and hit training-target samples.
+- LLM generation is structured: the model selects strings/imports/sections; the renderer builds the final YARA condition deterministically.
 - Dockerized execution with `start.sh`.
 
 ## Project Layout
@@ -70,7 +71,7 @@ Rules:
 - benign files can live directly under `benign/`
 - files are treated as static inputs only; nothing is executed
 
-Professor-facing comparison run:
+Primary comparison run:
 ```bash
 ./start.sh --mode full \
   --compare-all \
@@ -196,7 +197,7 @@ python -m llmyara.cli run-all-compare \
 ```
 
 ## Final Artifact Bundle
-A professor-facing `run-all-compare` output should contain:
+A `run-all-compare` output should contain:
 - `manifest.jsonl`
 - `splits.json`
 - `features.jsonl`
