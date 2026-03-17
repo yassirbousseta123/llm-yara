@@ -1,0 +1,5 @@
+method,role,status,families_total,families_ok,mean_f1,mean_tpr_target,mean_fpr_benign,rule_count
+llmyara-llm,primary,primary,138,128,0.423977,0.404342,0.0,128
+topstrings,baseline,reproduced,138,138,0.419535,0.479681,0.006078,138
+apiary-static,baseline,re-implemented,138,138,0.155688,0.699924,0.071762,138
+autoyara-bicluster,baseline,re-implemented,138,138,0.276024,0.796508,0.11828,138

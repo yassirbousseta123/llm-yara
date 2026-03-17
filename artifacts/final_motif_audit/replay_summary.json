@@ -1,0 +1,14 @@
+{
+  "families_compile_failed": 0,
+  "families_failed": 10,
+  "families_missing_rule": 10,
+  "families_ok": 128,
+  "families_scan_error": 0,
+  "families_total": 138,
+  "mean_f1": 0.427783,
+  "mean_f1_ok_only": 0.461203,
+  "mean_fpr_benign": 0.0,
+  "mean_fpr_benign_ok_only": 0.0,
+  "mean_tpr_target": 0.404342,
+  "mean_tpr_target_ok_only": 0.435931
+}

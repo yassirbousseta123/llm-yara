@@ -25,6 +25,7 @@ Every production run should include:
 - `results_per_family.csv`
 - `summary.json`
 - `summary.md`
+- provenance in `run_manifest.json`
 
 For research baseline comparison runs also keep:
 - `baseline_comparison.csv`
@@ -51,8 +52,18 @@ Never present `paper-only` metrics as directly comparable to your own split.
 - Prefer `--backend replay` after a real LLM run has been cached and frozen.
 - If using a non-OpenAI provider with compatible API semantics, set `OPENAI_BASE_URL`.
 - Run a small smoke subset first with the real backend before the full dataset.
+- Export a public-safe audit bundle before sharing results outside the local environment.
+
+Audit export:
+```bash
+python -m llmyara.cli export-audit-bundle \
+  --primary-run-dir /absolute/path/to/outputs/final_compare \
+  --replay-run-dir /absolute/path/to/outputs/final_compare_replay \
+  --out /absolute/path/to/artifacts/final_audit_bundle
+```
 
 ## Acceptance Triage
 - If a family is rejected with `train_target_hits_below_min`, the rule is syntactically valid but semantically useless; improve features/prompting before rerunning full experiments.
 - If a family is rejected with `benign_dev_fpr_exceeded`, the rule is too broad; tighten signal quality or condition structure.
+- If a family ends in `scan_error`, treat the evaluation as invalid until the underlying file-level scan failure is understood.
 - Do not report compile-only or always-false rules as successful generations.

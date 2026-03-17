@@ -1,0 +1,38 @@
+{
+  "artifact_hashes": {},
+  "backend": "openai",
+  "config": {
+    "features": {
+      "strings_max_per_file": 150,
+      "strings_min_len": 6
+    },
+    "llm": {
+      "model": "gpt-5-mini",
+      "temperature": 1.0,
+      "timeout_seconds": 90
+    },
+    "runtime": {
+      "workers": 1
+    },
+    "seed": 42,
+    "selection": {
+      "top_k_features": 30
+    },
+    "split": {
+      "benign_dev_ratio": 0.6,
+      "min_family_size": 6,
+      "test_ratio": 0.3
+    },
+    "yara": {
+      "benign_dev_fpr_threshold": 0.02,
+      "max_condition_length": 320,
+      "max_repairs": 3,
+      "max_rule_bytes": 2048,
+      "max_strings": 20,
+      "min_train_target_hits": 1
+    }
+  },
+  "model": "gpt-5-mini",
+  "openai_base_url": null,
+  "provenance": {}
+}

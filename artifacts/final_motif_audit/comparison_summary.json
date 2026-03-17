@@ -1,0 +1,123 @@
+{
+  "comparison_rows": [
+    {
+      "families_ok": 128,
+      "families_total": 138,
+      "mean_f1": 0.423977,
+      "mean_fpr_benign": 0.0,
+      "mean_tpr_target": 0.404342,
+      "method": "llmyara-llm",
+      "role": "primary",
+      "rule_count": 128,
+      "status": "primary"
+    },
+    {
+      "families_ok": 138,
+      "families_total": 138,
+      "mean_f1": 0.419535,
+      "mean_fpr_benign": 0.006078,
+      "mean_tpr_target": 0.479681,
+      "method": "topstrings",
+      "role": "baseline",
+      "rule_count": 138,
+      "status": "reproduced"
+    },
+    {
+      "families_ok": 138,
+      "families_total": 138,
+      "mean_f1": 0.155688,
+      "mean_fpr_benign": 0.071762,
+      "mean_tpr_target": 0.699924,
+      "method": "apiary-static",
+      "role": "baseline",
+      "rule_count": 138,
+      "status": "re-implemented"
+    },
+    {
+      "families_ok": 138,
+      "families_total": 138,
+      "mean_f1": 0.276024,
+      "mean_fpr_benign": 0.11828,
+      "mean_tpr_target": 0.796508,
+      "method": "autoyara-bicluster",
+      "role": "baseline",
+      "rule_count": 138,
+      "status": "re-implemented"
+    }
+  ],
+  "methods": [
+    {
+      "method": "llmyara-llm",
+      "role": "primary",
+      "rule_count": 128,
+      "status": "primary",
+      "summary": {
+        "families_compile_failed": 0,
+        "families_failed": 10,
+        "families_missing_rule": 10,
+        "families_ok": 128,
+        "families_scan_error": 0,
+        "families_total": 138,
+        "mean_f1": 0.423977,
+        "mean_f1_ok_only": 0.4571,
+        "mean_fpr_benign": 0.0,
+        "mean_fpr_benign_ok_only": 0.0,
+        "mean_tpr_target": 0.404342,
+        "mean_tpr_target_ok_only": 0.435931
+      }
+    },
+    {
+      "method": "topstrings",
+      "role": "baseline",
+      "rule_count": 138,
+      "status": "reproduced",
+      "summary": {
+        "families_compile_failed": 0,
+        "families_failed": 0,
+        "families_missing_rule": 0,
+        "families_ok": 138,
+        "families_scan_error": 0,
+        "families_total": 138,
+        "mean_f1": 0.419535,
+        "mean_f1_ok_only": 0.419535,
+        "mean_fpr_benign": 0.006078,
+        "mean_fpr_benign_ok_only": 0.006078,
+        "mean_tpr_target": 0.479681,
+        "mean_tpr_target_ok_only": 0.479681
+      }
+    },
+    {
+      "method": "apiary-static",
+      "role": "baseline",
+      "rule_count": 138,
+      "status": "re-implemented",
+      "summary": {
+        "families_compile_failed": 0,
+        "families_failed": 0,
+        "families_missing_rule": 0,
+        "families_ok": 138,
+        "families_scan_error": 0,
+        "families_total": 138,
+        "mean_f1": 0.155688,
+        "mean_f1_ok_only": 0.155688,
+        "mean_fpr_benign": 0.071762,
+        "mean_fpr_benign_ok_only": 0.071762,
+        "mean_tpr_target": 0.699924,
+        "mean_tpr_target_ok_only": 0.699924
+      }
+    },
+    {
+      "method": "autoyara-bicluster",
+      "role": "baseline",
+      "rule_count": 138,
+      "status": "re-implemented",
+      "summary": {
+        "families_ok": 138,
+        "families_total": 138,
+        "mean_f1": 0.276024,
+        "mean_fpr_benign": 0.11828,
+        "mean_tpr_target": 0.796508
+      }
+    }
+  ]
+}

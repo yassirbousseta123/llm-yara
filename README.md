@@ -7,6 +7,7 @@ A production-oriented pipeline for generating and evaluating YARA rules from mal
 - No malware execution.
 - Dataset directories can be mounted read-only.
 - Deterministic splits and replayable LLM responses.
+- Provenance manifests with git/dependency metadata and artifact hashes.
 
 ## What This Repository Delivers
 - End-to-end CLI pipeline:
@@ -16,6 +17,7 @@ A production-oriented pipeline for generating and evaluating YARA rules from mal
 - LLM rule acceptance is semantic, not syntax-only: accepted rules must compile, stay below the benign-dev threshold, and hit training-target samples.
 - LLM generation is structured: the model selects strings/imports/sections; the renderer builds the final YARA condition deterministically.
 - Dockerized execution with `start.sh`.
+- Startup preflight for required Python dependencies.
 
 ## Project Layout
 - `llmyara/`: core implementation
@@ -125,6 +127,7 @@ Key commands:
 - `baseline-autoyara`
 - `baseline-eval`
 - `compare-all`
+- `export-audit-bundle`
 
 ## Baselines
 - `baseline-topstrings`: deterministic string-only baseline (`reproduced`).
@@ -215,12 +218,31 @@ A `run-all-compare` output should contain:
 - `comparison/llmyara_llm/method_manifest.json`
 - `comparison/baselines/...`
 
+`summary.json` now reports both:
+- all-family aggregates in `mean_f1`, `mean_tpr_target`, `mean_fpr_benign`
+- ok-only aggregates in `mean_f1_ok_only`, `mean_tpr_target_ok_only`, `mean_fpr_benign_ok_only`
+
+This avoids overstating performance when some families end in `missing_rule`, `compile_failed`, or `scan_error`.
+
+## Public Audit Bundle
+To export a safe, reviewable subset of frozen results without publishing the entire `outputs/` tree:
+
+```bash
+python -m llmyara.cli export-audit-bundle \
+  --primary-run-dir /absolute/path/to/outputs/final_compare \
+  --replay-run-dir /absolute/path/to/outputs/final_compare_replay \
+  --out /absolute/path/to/artifacts/final_audit_bundle
+```
+
+The exported bundle contains sanitized summaries and manifests with local output paths removed.
+
 ## Reproducibility
 - Use fixed seeds from `configs/default.yaml`.
 - Use backend `replay` for deterministic regeneration from cached responses.
 - Each run persists artifacts in one folder (`outputs/<run_id>/`).
 - `run-all-compare` writes unified all-method comparison artifacts under `comparison/`.
 - Primary runs also persist `llm_cache.jsonl` and `comparison_run_manifest.json` for replay/freeze workflows.
+- `run_manifest.json` and `comparison_run_manifest.json` include provenance metadata and artifact hashes.
 
 ## Baseline Labeling Policy
 When reporting comparisons, label each method as one of:

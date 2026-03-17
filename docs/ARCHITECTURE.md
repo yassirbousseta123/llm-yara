@@ -22,6 +22,12 @@ Read when:
 6. `evaluate`: Report family-level and aggregate metrics.
 7. `report`: Persist machine-readable and human-readable artifacts.
 
+## Evaluation Contract
+- Aggregate headline metrics must include all families, not only `status=ok`.
+- `summary.json` also records explicit `ok-only` means for analysis.
+- Missing rules, compile failures, and scan errors remain visible in per-family outputs.
+- Scan exceptions are surfaced as `scan_error` status instead of being silently converted into misses.
+
 ## Generation Acceptance Contract
 - Candidate rules must compile and pass structural validation.
 - Candidate rules must hit training-target samples before they can be accepted.
@@ -54,7 +60,7 @@ Read when:
 
 ## Output Layout
 Each run writes a self-contained artifact bundle:
-- `run_manifest.json`: command + config snapshot
+- `run_manifest.json`: command + config snapshot + provenance + artifact hashes
 - `manifest.jsonl`, `splits.json`, `features.jsonl`, `selected_features.json`
 - `rules/*.yar`, `generation_summary.json`
 - `results_per_family.csv`, `summary.json`, `summary.md`
