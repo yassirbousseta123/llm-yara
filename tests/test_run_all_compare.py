@@ -31,6 +31,8 @@ def test_run_all_compare_writes_comparison_manifest(tmp_path: Path, monkeypatch)
             "comparison_csv": str((out_dir / "comparison" / "results_all_methods.csv").resolve()),
             "comparison_json": str((out_dir / "comparison" / "summary_all_methods.json").resolve()),
             "comparison_markdown": str((out_dir / "comparison" / "summary_all_methods.md").resolve()),
+            "significance_json": str((out_dir / "comparison" / "significance_vs_primary.json").resolve()),
+            "failure_analysis_json": str((out_dir / "comparison" / "failure_analysis.json").resolve()),
         },
     )
 

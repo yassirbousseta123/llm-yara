@@ -55,6 +55,8 @@ def run_all_compare(
         "comparison_csv": comparison["comparison_csv"],
         "comparison_json": comparison["comparison_json"],
         "comparison_markdown": comparison["comparison_markdown"],
+        "significance_json": comparison["significance_json"],
+        "failure_analysis_json": comparison["failure_analysis_json"],
     }
     run_manifest_path = run_result["artifacts"].get("run_manifest")
     if run_manifest_path:

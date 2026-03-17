@@ -64,6 +64,8 @@ def test_evaluate_rules_reports_all_family_and_ok_only_metrics(tmp_path: Path, m
     assert summary["mean_tpr_target"] == 0.5
     assert summary["mean_fpr_benign"] == 0.0
     assert summary["mean_f1_ok_only"] == 1.0
+    assert summary["mean_rule_specificity"] == 1.0
+    assert summary["mean_rule_complexity"] > 0.0
 
 
 def test_evaluate_rules_marks_scan_errors(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -90,3 +92,4 @@ def test_evaluate_rules_marks_scan_errors(tmp_path: Path, monkeypatch: pytest.Mo
     assert rows[0]["status"] == "scan_error"
     assert rows[0]["scan_error_count"] == 3
     assert summary["families_scan_error"] == 1
+    assert summary["mean_rule_specificity"] == 1.0

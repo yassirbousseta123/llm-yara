@@ -7,6 +7,7 @@ from typing import Any
 from llmyara.eval.metrics import binary_metrics, safe_div
 from llmyara.yara.compile import compile_rule
 from llmyara.yara.scan import scan_rule
+from llmyara.yara.stats import rule_statistics
 
 
 def _id_to_path(manifest: list[dict[str, Any]]) -> dict[str, str]:
@@ -39,17 +40,24 @@ def evaluate_rules(
                     "tpr_target": 0.0,
                     "fpr_benign": 0.0,
                     "off_target_rate": 0.0,
+                    "rule_specificity": 1.0,
                     "precision": 0.0,
                     "recall": 0.0,
                     "f1": 0.0,
                     "scan_seconds": 0.0,
                     "scan_error_count": 0,
                     "compile_ok": False,
+                    "rule_string_count": 0,
+                    "condition_clause_count": 0,
+                    "rule_complexity": 0,
+                    "rule_bytes": 0,
+                    "condition_length": 0,
                 }
             )
             continue
 
         rule_text = Path(rule_path).read_text(encoding="utf-8")
+        stats = rule_statistics(rule_text)
         compile_res = compile_rule(rule_text)
         if not compile_res.ok:
             rows.append(
@@ -59,6 +67,7 @@ def evaluate_rules(
                     "tpr_target": 0.0,
                     "fpr_benign": 0.0,
                     "off_target_rate": 0.0,
+                    "rule_specificity": 1.0,
                     "precision": 0.0,
                     "recall": 0.0,
                     "f1": 0.0,
@@ -66,6 +75,7 @@ def evaluate_rules(
                     "scan_error_count": 0,
                     "compile_ok": False,
                     "compile_error": compile_res.error,
+                    **stats,
                 }
             )
             continue
@@ -93,6 +103,7 @@ def evaluate_rules(
                     "tpr_target": 0.0,
                     "fpr_benign": 0.0,
                     "off_target_rate": 0.0,
+                    "rule_specificity": 1.0,
                     "precision": 0.0,
                     "recall": 0.0,
                     "f1": 0.0,
@@ -106,6 +117,7 @@ def evaluate_rules(
                     "target_test_size": len(target_paths),
                     "other_test_size": len(other_paths),
                     "benign_test_size": len(benign_test_paths),
+                    **stats,
                 }
             )
             continue
@@ -123,6 +135,7 @@ def evaluate_rules(
             "tpr_target": round(safe_div(len(target_scan.matches), len(target_paths)), 6),
             "fpr_benign": round(safe_div(len(benign_scan.matches), len(benign_test_paths)), 6),
             "off_target_rate": round(safe_div(len(other_scan.matches), len(other_paths)), 6),
+            "rule_specificity": round(1.0 - safe_div(len(other_scan.matches), len(other_paths)), 6),
             "precision": round(bm["precision"], 6),
             "recall": round(bm["recall"], 6),
             "f1": round(bm["f1"], 6),
@@ -131,6 +144,7 @@ def evaluate_rules(
             "target_test_size": len(target_paths),
             "other_test_size": len(other_paths),
             "benign_test_size": len(benign_test_paths),
+            **stats,
         }
         rows.append(row)
 
@@ -150,9 +164,21 @@ def evaluate_rules(
         "mean_f1": _mean(rows, "f1"),
         "mean_tpr_target": _mean(rows, "tpr_target"),
         "mean_fpr_benign": _mean(rows, "fpr_benign"),
+        "mean_off_target_rate": _mean(rows, "off_target_rate"),
+        "mean_rule_specificity": _mean(rows, "rule_specificity"),
+        "mean_rule_complexity": _mean(rows, "rule_complexity"),
+        "mean_rule_string_count": _mean(rows, "rule_string_count"),
+        "mean_condition_clause_count": _mean(rows, "condition_clause_count"),
+        "mean_rule_bytes": _mean(rows, "rule_bytes"),
         "mean_f1_ok_only": _mean(ok_rows, "f1"),
         "mean_tpr_target_ok_only": _mean(ok_rows, "tpr_target"),
         "mean_fpr_benign_ok_only": _mean(ok_rows, "fpr_benign"),
+        "mean_off_target_rate_ok_only": _mean(ok_rows, "off_target_rate"),
+        "mean_rule_specificity_ok_only": _mean(ok_rows, "rule_specificity"),
+        "mean_rule_complexity_ok_only": _mean(ok_rows, "rule_complexity"),
+        "mean_rule_string_count_ok_only": _mean(ok_rows, "rule_string_count"),
+        "mean_condition_clause_count_ok_only": _mean(ok_rows, "condition_clause_count"),
+        "mean_rule_bytes_ok_only": _mean(ok_rows, "rule_bytes"),
     }
     return rows, summary
 

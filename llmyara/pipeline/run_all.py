@@ -8,6 +8,7 @@ from typing import Any
 from llmyara.config import AppConfig
 from llmyara.data.indexer import build_manifest
 from llmyara.data.splits import build_splits
+from llmyara.eval.failure_analysis import summarize_generation_failures
 from llmyara.eval.evaluate import evaluate_rules, write_results_csv
 from llmyara.eval.reports import write_summary_markdown
 from llmyara.features.extract import extract_features
@@ -59,6 +60,8 @@ def run_all(
         cache_path=out_dir / "llm_cache.jsonl",
     )
     write_json(out_dir / "generation_summary.json", generation)
+    failure_analysis = summarize_generation_failures(generation)
+    write_json(out_dir / "failure_analysis.json", failure_analysis)
 
     eval_rows, eval_summary = evaluate_rules(
         manifest=manifest,
@@ -75,6 +78,7 @@ def run_all(
         "features": str((out_dir / "features.jsonl").resolve()),
         "selected": str((out_dir / "selected_features.json").resolve()),
         "generation": str((out_dir / "generation_summary.json").resolve()),
+        "failure_analysis": str((out_dir / "failure_analysis.json").resolve()),
         "llm_cache": str((out_dir / "llm_cache.jsonl").resolve()),
         "results_csv": str((out_dir / "results_per_family.csv").resolve()),
         "summary_json": str((out_dir / "summary.json").resolve()),

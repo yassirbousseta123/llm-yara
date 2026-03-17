@@ -57,6 +57,7 @@ def test_compare_all_writes_unified_artifacts(tmp_path: Path, monkeypatch: pytes
     manifest, splits, selected, features, generation, out_dir = _sample_inputs(tmp_path)
 
     monkeypatch.setattr(compare_all, "is_yara_available", lambda: True)
+    monkeypatch.setattr(compare_all, "_significance_vs_primary", lambda method_results: [{"baseline_method": "topstrings"}])
 
     def fake_evaluate_rules(manifest: list[dict[str, str]], splits: dict, rule_paths: dict[str, str]) -> tuple[list[dict], dict]:
         assert manifest
@@ -79,6 +80,8 @@ def test_compare_all_writes_unified_artifacts(tmp_path: Path, monkeypatch: pytes
             "mean_f1": mean_f1,
             "mean_tpr_target": 1.0,
             "mean_fpr_benign": 0.0,
+            "mean_rule_specificity": 1.0,
+            "mean_rule_complexity": 3.0,
         }
         return rows, summary
 
@@ -101,6 +104,8 @@ def test_compare_all_writes_unified_artifacts(tmp_path: Path, monkeypatch: pytes
                         "mean_f1": 0.41,
                         "mean_tpr_target": 1.0,
                         "mean_fpr_benign": 0.0,
+                        "mean_rule_specificity": 1.0,
+                        "mean_rule_complexity": 2.0,
                     },
                 }
             ],
@@ -120,9 +125,13 @@ def test_compare_all_writes_unified_artifacts(tmp_path: Path, monkeypatch: pytes
     comparison_csv = Path(result["comparison_csv"])
     comparison_json = Path(result["comparison_json"])
     comparison_md = Path(result["comparison_markdown"])
+    significance_json = Path(result["significance_json"])
+    failure_json = Path(result["failure_analysis_json"])
     assert comparison_csv.exists()
     assert comparison_json.exists()
     assert comparison_md.exists()
+    assert significance_json.exists()
+    assert failure_json.exists()
 
     with comparison_csv.open("r", encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
@@ -131,6 +140,7 @@ def test_compare_all_writes_unified_artifacts(tmp_path: Path, monkeypatch: pytes
     methods = {row["method"]: row for row in rows}
     assert methods["llmyara-llm"]["role"] == "primary"
     assert methods["topstrings"]["role"] == "baseline"
+    assert methods["llmyara-llm"]["mean_rule_complexity"] == "3.0"
 
 
 def test_compare_all_requires_yara(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
