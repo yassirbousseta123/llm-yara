@@ -13,14 +13,18 @@ htmlcov/
 # Build/artifacts
 build/
 dist/
-outputs/
-reports/
+/outputs/
+/reports/
+/artifacts/final_motif_audit_debug/
 
 # Data and caches
-data/
-cache/
+/data/
+/cache/
 *.parquet
 *.jsonl
+papers/
+PLAN.MD
+project_2.md
 
 # Env/editor
 .env
@@ -29,3 +33,7 @@ cache/
 .DS_Store
 .vscode/
 .idea/
+
+/.firecrawl/
+!llmyara/data/
+!llmyara/data/**
