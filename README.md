@@ -13,7 +13,7 @@ A pipeline for generating and evaluating YARA rules from malware family samples 
 - End-to-end CLI pipeline:
   - `index -> split -> extract -> select -> generate -> evaluate`
 - Bounded compile-repair loop for rule validity.
-- Explicit leakage control: `benign_dev` for gating, `benign_test` for final FPR.
+- Explicit leakage control: `benign_dev` contributes negative examples for feature ranking and acceptance gating, while `benign_test` is reserved for final FPR.
 - LLM rule acceptance is semantic, not syntax-only: accepted rules must compile, stay below the benign-dev threshold, and hit training-target samples.
 - LLM generation is structured: the model selects strings/imports/sections; the renderer builds the final YARA condition deterministically.
 - Dockerized execution with `start.sh`.

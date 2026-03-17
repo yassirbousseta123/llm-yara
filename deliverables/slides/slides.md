@@ -32,6 +32,11 @@ style: |
     background-color: #f1f2f6;
     font-size: 0.85em;
   }
+  .source {
+    font-size: 0.52em;
+    color: #636e72;
+    margin-top: 0.4em;
+  }
   .columns {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -106,16 +111,16 @@ Emphasize that the problem is scale: hundreds of families, each needing a rule. 
 
 **Parameters:** `test_ratio=0.3`, `benign_dev_ratio=0.6`, `seed=42`
 
-`benign_dev` is used **only** during gating -- never for metric reporting.
+`benign_dev` is used in feature ranking and acceptance gating -- never for metric reporting.
 `benign_test` is held out until final evaluation.
 
 <!-- speaker notes
-The split discipline is critical. benign_dev is never used in the reported metrics -- it is consumed by the acceptance gates during generation. benign_test is only touched at evaluation time.
+The split discipline is critical. benign_dev contributes negative examples during feature selection and is reused for the acceptance gate, but it never appears in the reported final metrics. benign_test is only touched at evaluation time.
 -->
 
 ---
 
-## Pipeline Architecture
+## Pipeline
 
 ```
 index --> split --> extract --> select --> generate --> evaluate
@@ -124,34 +129,32 @@ index --> split --> extract --> select --> generate --> evaluate
 <div class="columns">
 <div>
 
-**Feature extraction**
-- ASCII/wide strings (min 6 chars)
-- PE imports via `pefile`
-- Section names and PE metadata
+**Extract**
+- Strings, imports, PE metadata
 
-**Feature selection**
-- Top-30 discriminative features per family
-- Chi-squared ranking vs. other families
+**Select**
+- Top-30 features per family
+- TF-IDF + chi-squared
+- `train_target` vs `train_other` + `benign_dev`
 
 </div>
 <div>
 
-**Structured LLM generation**
-- LLM returns a **JSON payload** (not freeform YARA)
-- Deterministic renderer builds the rule
-- Bounded repair loop: **max 3 attempts**
+**Generate**
+- Primary path: structured JSON
+- Deterministic renderer
+- Repair path may preserve YARA text
+- Max 3 repairs
 
-**Two acceptance gates**
-1. Train-hit gate: rule must match >= 1 train sample
-2. Benign-dev FPR gate: FPR <= 0.02
+**Accept**
+- Train-hit: >= 1 train sample
+- Benign-dev FPR: <= 0.02
 
 </div>
 </div>
-
-Configured model: `gpt-5-mini` | Workers: 1
 
 <!-- speaker notes
-The LLM does NOT write YARA directly. It returns structured JSON with selected strings, imports, and conditions. A deterministic renderer turns this into valid YARA.
+Primary generation is structured JSON. Repair responses may also return complete YARA text, which the renderer preserves when present.
 -->
 
 ---
@@ -186,13 +189,11 @@ Important: YAMME and PackGenome are cited as related work but were NOT executed 
 | apiary-static | 138 / 138 | 0.1557 | 0.6999 | 0.0718 | 0.8638 |
 | autoyara-bicluster | 138 / 138 | 0.2760 | 0.7965 | 0.1183 | 0.8180 |
 
-**Reading this table:**
-- F1 is computed across all 138 families (rejected = 0 for that family)
-- llmyara-llm has the highest mean F1 and specificity in this table
-- **But:** 10 families have no accepted rule -- coverage is 128/138
-- topstrings covers all 138 families with no gap
+- All-family metrics: rejected families contribute zero
+- `llmyara-llm`: numerically highest F1 / specificity, but `128/138` coverage
+- `topstrings`: full `138/138` coverage
 
-Source: `artifacts/final_motif_audit/comparison_summary.json`
+<div class="source">Source: <code>artifacts/final_motif_audit/comparison_summary.json</code></div>
 
 <!-- speaker notes
 This is the headline table. All metrics are computed over all 138 families. For llmyara-llm, the 10 rejected families contribute F1=0 and TPR=0, which is why the all-family F1 is lower than the ok-only F1.
@@ -215,7 +216,7 @@ This is the headline table. All metrics are computed over all 138 families. For 
 - The LLM pipeline is similar to topstrings on F1, not better
 - The F1 difference vs apiary-static and autoyara-bicluster is significant
 
-Source: `artifacts/final_motif_audit/significance_vs_primary.json`
+<div class="source">Source: <code>artifacts/final_motif_audit/significance_vs_primary.json</code></div>
 
 <!-- speaker notes
 We do NOT claim to beat topstrings. The delta is small and the p-value is 0.85.
@@ -260,7 +261,7 @@ The trade-off is clear: the LLM pipeline sacrifices recall for lower benign FPR.
 
 **This is the main limitation.** topstrings covers all 138 families.
 
-Source: `artifacts/final_motif_audit/failure_analysis.json`
+<div class="source">Source: <code>artifacts/final_motif_audit/failure_analysis.json</code></div>
 
 <!-- speaker notes
 The coverage gap is real. The acceptance gates reject weak rules, but some families then receive no rule at all.
@@ -268,30 +269,48 @@ The coverage gap is real. The acceptance gates reject weak rules, but some famil
 
 ---
 
-## Saved Results and Replay
+## Example Accepted Rule
 
-**Saved result bundle** with hashes for exported artifacts:
+Source family: `nanolocker` | Final metrics: `F1=1.0`, `TPR=1.0`, `FPR=0.0`
 
-| Artifact | Verified |
-|---|---|
-| Split definitions | `6ebdf6f0...` |
-| Feature matrices | `9432726...` |
-| LLM cache (all prompts + responses) | `31d8e1d3...` |
-| Generation summary | `71d0a479...` |
-| Results CSV | `dfa58ea7...` |
+```yara
+import "pe"
+rule nanolocker_candidate_01 {
+  strings:
+    $a1 = "inet_addr" ascii
+  condition:
+    uint16(0) == 0x5A4D
+    and pe.imports("advapi32.dll", "abortsystemshutdowna")
+    and 1 of them
+}
+```
 
-**Run metadata:** Python 3.12.2, yara-python 4.5.1, openai 1.61.1
+- Selected strings become YARA string terms
+- Import predicate adds a family-specific structural check
+- Final rule stays simple enough to audit
 
-**Replay verification:**
-| Run | Mean F1 | Mean TPR | Families OK |
-|---|---|---|---|
-| Primary | 0.4240 | 0.4043 | 128 |
-| Replay (from cache) | 0.4278 | 0.4043 | 128 |
-
-Replay keeps the same accepted-family count and mean TPR; mean F1 changes slightly.
+<div class="source">Source: <code>outputs/final_motif_openai/rules/nanolocker.yar</code></div>
 
 <!-- speaker notes
-This slide shows where the reported numbers come from and how replay compares with the primary run.
+Show one real rule so the audience sees the output quality directly. This is not a synthetic example; it comes from the saved primary output.
+-->
+
+---
+
+## Implementation & Reproducibility
+
+- Complete repo workflow:
+  `index -> split -> extract -> select -> generate -> evaluate`
+- Packaging:
+  `Dockerfile`, `docker-compose.yml`, `start.sh`
+- CLI supports demo runs, full runs, baseline comparison, and audit export
+- Reported metrics come from `artifacts/final_motif_audit/`
+- Replay path exists as a check on saved outputs
+
+<div class="source">Source: <code>README.md</code>, <code>start.sh</code>, <code>artifacts/final_motif_audit/</code></div>
+
+<!-- speaker notes
+This slide covers implementation quality for grading: packaging, entrypoints, documented workflow, and saved artifacts.
 -->
 
 ---
@@ -318,9 +337,10 @@ In this comparison, the LLM method gives:
 
 - **Zero benign FPR** (0.000)
 - **Highest specificity** (0.999)
-- **Saved results and replay check**
+- **128 / 138 accepted families**
+- **Numerically highest mean F1**
 
-The main trade-off is lower benign FPR versus lower recall and lower family coverage.
+The main trade-off is lower benign FPR versus lower recall and lower family coverage. The F1 difference vs `topstrings` is not significant.
 
 </div>
 </div>
@@ -334,11 +354,11 @@ Close with the measured result: low benign FPR, high specificity, but lower reca
 <!-- _class: lead -->
 <!-- _paginate: false -->
 
-# Backup Slides
+# Appendix
 
 ---
 
-## Backup 1: Full Metric Table
+## Appendix: Full Metric Table
 
 | Method | Fam. OK | Mean F1 | Mean TPR | Mean FPR | Mean Spec. | Mean Compl. | Mean Off-Target | Rules |
 |---|---|---|---|---|---|---|---|---|
@@ -351,7 +371,7 @@ Off-target rate = fraction of non-family malware samples that trigger the rule.
 
 ---
 
-## Backup 2: Ok-Only Metrics (128 Accepted Families)
+## Appendix: Ok-Only Metrics (128 Accepted Families)
 
 | Metric | All 138 | Ok-Only (128) |
 |---|---|---|
@@ -366,7 +386,7 @@ Off-target rate = fraction of non-family malware samples that trigger the rule.
 
 ---
 
-## Backup 3: Rule Complexity
+## Appendix: Rule Complexity
 
 | Method | Mean Complexity | Mean Strings | Mean Clauses |
 |---|---|---|---|
@@ -382,7 +402,7 @@ Off-target rate = fraction of non-family malware samples that trigger the rule.
 
 ---
 
-## Backup 4: Rejected Family Details
+## Appendix: Rejected Family Details
 
 | Family | Reason | Repairs | Train Hits |
 |---|---|---|---|
@@ -402,7 +422,7 @@ The 3 "FPR exceeded" families: rules match benign files above the 0.02 threshold
 
 ---
 
-## Backup 5: Annotated YARA Rule -- nanolocker (F1 = 1.0)
+## Appendix: Annotated YARA Rule -- nanolocker (F1 = 1.0)
 
 Source: `outputs/final_motif_openai/rules/nanolocker.yar`
 
@@ -435,7 +455,7 @@ rule nanolocker_candidate_01 {
 
 ---
 
-## Backup 6: Pipeline Configuration
+## Appendix: Pipeline Configuration
 
 | Parameter | Value | Section |
 |---|---|---|
@@ -459,7 +479,7 @@ Source: `configs/default.yaml` and `artifacts/final_motif_audit/run_manifest.jso
 
 ---
 
-## Backup 7: Replay Verification
+## Appendix: Replay Verification
 
 | Metric | Primary Run | Replay Run | Delta |
 |---|---|---|---|

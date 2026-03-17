@@ -135,7 +135,7 @@ signatures~\cite{rulellm2025}.
 
 This report describes \sysname, a pipeline that occupies a specific
 point in the design space: \emph{static-only feature extraction},
-\emph{structured LLM payloads} (not freeform generation),
+\emph{structured primary LLM payloads},
 \emph{deterministic rendering} of YARA syntax, and
 \emph{acceptance gates} that reject rules failing minimum recall or
 maximum FPR thresholds on held-out development data.
@@ -169,13 +169,13 @@ All splits are deterministic (seed=42) and computed per-family:
     split 60\%/40\% (\texttt{benign\_dev\_ratio}=0.6).
 \end{itemize}
 
-\textbf{Leakage prevention.}  Feature extraction and LLM prompting
-use only \texttt{train\_target} samples.  The benign development set
-(\texttt{benign\_dev}) gates rule acceptance but is never used for
-feature selection.  Final metrics are computed exclusively on
-\texttt{test\_target} and \texttt{benign\_test}, which are unseen
-during all prior stages.  No baseline receives information from the
-test split.
+\textbf{Leakage prevention.}  LLM prompting uses
+\texttt{train\_target} samples from the family under construction.
+Feature selection ranks each family's \texttt{train\_target} positives
+against \texttt{train\_other} plus \texttt{benign\_dev} negatives.
+Final metrics are computed exclusively on \texttt{test\_target} and
+\texttt{benign\_test}, which remain unseen during generation and final
+scoring.  No baseline receives information from the test split.
 
 % ============================================================
 \section{System Design and Implementation}
@@ -236,11 +236,11 @@ test split.
   \node[note, below=0.15cm of idx] {manifest\\sha256};
   \node[note, below=0.15cm of spl] {seed=42\\per-family};
   \node[note, below=0.15cm of ext] {PE strings\\imports};
-  \node[note, below=0.15cm of sel] {TF-IDF\\top-$k$=30};
+  \node[note, below=0.15cm of sel] {TF-IDF+chi2\\top-$k$=30};
   \node[note, below=0.15cm of eva] {TPR, FPR\\$F_1$, spec.};
 
   % LLM callout
-  \node[note, above=0.3cm of gen] {LLM JSON\\$\rightarrow$ renderer};
+  \node[note, above=0.3cm of gen] {primary JSON\\repair loop};
 \end{tikzpicture}
 \caption{%
   \sysname pipeline.  Stages 1--4 are fully deterministic.
@@ -264,17 +264,18 @@ benign pool is split into \texttt{benign\_dev} (60\%) and
 (\texttt{seed}=42) for reproducibility.
 
 \subsection{Stage 3: Extract}
-Static PE features are extracted from \texttt{train\_target} samples:
-printable ASCII and wide strings, PE import names (DLL and function),
-section names, and PE metadata (timestamps, entry-point
-characteristics).  No dynamic or behavioral features are used.
+Static PE features are extracted for every indexed sample: printable
+ASCII and wide strings, PE import names (DLL and function), section
+names, and PE metadata (timestamps, entry-point characteristics).  No
+dynamic or behavioral features are used.
 
 \subsection{Stage 4: Select}
-Discriminative features are ranked using TF-IDF
-weighting~\cite{salton1988tfidf} computed on the training malware
-corpus.  The top $k=30$ features per family are retained
-(\texttt{top\_k\_features}=30).  This ranking uses only
-\texttt{train\_target}; no benign data influences feature selection.
+Discriminative features are ranked with TF-IDF
+vectorization~\cite{salton1988tfidf} and chi-squared scoring.  For each
+family, the selector treats \texttt{train\_target} as positives and
+\texttt{train\_other} plus \texttt{benign\_dev} as negatives.  The top
+$k=30$ features per family are retained
+(\texttt{top\_k\_features}=30).
 
 \subsection{Stage 5: Generate}
 \label{sec:generate}
@@ -290,8 +291,8 @@ to the configured LLM backend (gpt-5-mini).  The model returns a
 \end{itemize}
 
 A \textbf{deterministic renderer} converts this JSON into syntactically
-valid YARA source.  The LLM never writes YARA syntax directly; it only
-selects features and logical structure.
+valid YARA source.  The primary generation path stays structured, while
+repair payloads may preserve full YARA text returned by the model.
 
 \textbf{Compile and repair.}  The rendered rule is compiled with
 \texttt{yara-python}.  If compilation fails, the error message is fed
@@ -312,6 +313,17 @@ Accepted rules are scanned against \texttt{test\_target} and
 (TPR), false positive rate (FPR), $F_1$ score, rule specificity
 ($1 - \text{off-target rate}$), and rule complexity (string count plus
 condition clause count).
+
+\subsection{Implementation and Packaging}
+The repository ships as a complete CLI workflow with
+\path{Dockerfile}, \path{docker-compose.yml}, and \path{start.sh}.  The
+default entrypoint validates the requested mode and required
+dependencies before dispatching either a demo run or the full
+index$\rightarrow$split$\rightarrow$extract$\rightarrow$select$\rightarrow$generate$\rightarrow$evaluate
+pipeline.  Saved outputs under
+\path{artifacts/final_motif_audit/} provide the numbers reported in this
+document, while replay support allows a second pass over cached LLM
+responses without changing the evaluation contract.
 
 % ============================================================
 \section{Experimental Protocol}
@@ -359,10 +371,6 @@ required for significance.
 \bottomrule
 \end{tabular}
 \end{table}
-
-The default configuration records \texttt{temperature\_config}=1.0,
-but GPT-5-family requests are not described as relying on an explicit
-temperature override in this report.
 
 % ============================================================
 \section{Executed Methods}
@@ -455,7 +463,7 @@ methods.
 \end{tabularx}
 \end{table}
 
-\sysname achieves the highest mean~$F_1$ (0.4240) and the highest
+\sysname has the numerically highest mean~$F_1$ (0.4240) and the highest
 mean specificity (0.9988) with zero mean benign FPR.  However, the
 $F_1$ difference from \topstrings is marginal: only $+0.0044$
 absolute.
@@ -477,6 +485,38 @@ Mean rule complexity for \sysname (11.78) is higher than \topstrings
 produced by the structured renderer (mean condition clause count of
 2.21 vs.\ 1.0 for both baselines).  Mean string count is 9.57 for
 \sysname vs.\ 7.94 for \topstrings.
+
+\smallskip
+\noindent\textbf{Example accepted rule.}  The Nanolocker family reaches
+$F_1=1.0$, TPR$=1.0$, and benign FPR$=0.0$.  The saved rule combines a
+PE header check, an import predicate, and thresholded string matching:
+
+\begin{center}
+\begin{minipage}{0.9\columnwidth}
+\begin{lstlisting}[
+  language={},
+  basicstyle=\ttfamily\scriptsize,
+  numbers=none,
+  frame=single,
+  xleftmargin=0pt,
+  aboveskip=2pt,
+  belowskip=2pt
+]
+strings:
+  $a1 = "inet_addr" ascii
+condition:
+  uint16(0) == 0x5A4D and
+  pe.imports("advapi32.dll",
+             "abortsystemshutdowna") and
+  1 of them
+\end{lstlisting}
+\end{minipage}
+\end{center}
+
+This snippet shows the final rule shape used by the primary method.
+The full annotated rule remains in
+\cref{app:rule}.  Source:
+\path{outputs/final_motif_openai/rules/nanolocker.yar}.
 
 % ============================================================
 \section{Significance \& Trade-offs}
@@ -565,9 +605,9 @@ higher on recall.  \apiary and \autoyara trade specificity for recall,
 which reduces their $F_1$ due to high false-positive rates.
 
 The clearest difference for \sysname is specificity: 0.9988 vs.\ 0.9924 for
-\topstrings.  In operational deployment, a rule with zero benign FPR
-generates fewer analyst alerts than one with FPR=0.006, which may
-justify the lower recall if the analyst workload budget is constrained.
+\topstrings.  On this split, the lower benign FPR is the main reason
+why \sysname remains numerically first on mean $F_1$ despite lower
+recall.
 
 % ============================================================
 \section{Failure Analysis}
@@ -616,63 +656,6 @@ assurance.
 
 \smallskip
 \noindent\textbf{Source: }\path{artifacts/final_motif_audit/failure_analysis.json}.
-
-% ============================================================
-\section{Saved Results and Replay}
-\label{sec:reproducibility}
-
-\subsection{Saved Result Bundle}
-All metrics reported in this paper are drawn from the saved result
-bundle under \path{artifacts/final_motif_audit/}.  The bundle includes:
-\begin{itemize}[nosep,leftmargin=1.2em]
-  \item Per-family evaluation CSVs with TPR, FPR, $F_1$, specificity,
-    and complexity (\path{results_per_family.csv},
-    \path{comparison_rows.csv}).
-  \item Aggregate summary JSONs (\texttt{primary\_summary.json},
-    \path{comparison_summary.json}, \path{replay_summary.json}).
-  \item Significance and failure-analysis artifacts
-    (\path{significance_vs_primary.json},
-    \path{failure_analysis.json}).
-  \item A sanitized \path{run_manifest.json} with run metadata and
-    artifact hashes.
-\end{itemize}
-
-\subsection{Run Metadata}
-\begin{itemize}[nosep,leftmargin=1.2em]
-  \item \textbf{Model:} gpt-5-mini (OpenAI backend)
-  \item \textbf{Platform:} macOS, Python 3.12.2
-  \item \textbf{Dependencies:} yara-python 4.5.1,
-    scikit-learn 1.6.1~\cite{pedregosa2011sklearn}, openai 1.61.1
-  \item \textbf{Seed:} 42 (splits and significance tests)
-\end{itemize}
-
-\subsection{Replay Verification}
-A full replay of the \sysname pipeline was executed to assess
-reproducibility.  \cref{tab:replay} compares the primary and replay
-runs.
-
-\begin{table}[H]
-\centering
-\caption{Primary vs.\ replay run comparison.}
-\label{tab:replay}
-\small
-\begin{tabular}{@{}lcc@{}}
-\toprule
-\textbf{Metric} & \textbf{Primary} & \textbf{Replay} \\
-\midrule
-Families OK       & 128\,/\,138 & 128\,/\,138 \\
-Mean $F_1$        & 0.4240      & 0.4278 \\
-Mean TPR          & 0.4043      & 0.4043 \\
-Mean FPR\textsubscript{ben} & 0.0000 & 0.0000 \\
-Mean Specificity  & 0.9988      & 0.9990 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The replay rerun is close but not identical.  The same 128 families
-are accepted in both runs, and mean TPR is identical (0.4043).  Mean
-$F_1$ changes slightly (0.4240 vs.\ 0.4278), so we report replay as a
-check on the saved outputs rather than as exact equality.
 
 % ============================================================
 \section{Related Work}
@@ -757,7 +740,7 @@ FPR$=0.0000$, mean specificity $=0.9988$, and accepted rules for
 
 The main observations are:
 \begin{itemize}[nosep,leftmargin=1.2em]
-  \item Highest mean $F_1$ in the executed comparison, but not a
+  \item Numerically highest mean $F_1$ in the executed comparison, but not a
     significant difference from \topstrings.
   \item Zero benign FPR and the highest specificity among the four
     executed methods.
