@@ -38,3 +38,11 @@ project_2.md
 !llmyara/data/
 !llmyara/data/**
 llmyara/data/__pycache__/
+
+# Internal deliverable sources
+/checkpoint.md
+/deliverables/BUILD.md
+/deliverables/report/references.bib
+/deliverables/report/report.tex
+/deliverables/slides/slides.md
+/deliverables/figures/*.tex
