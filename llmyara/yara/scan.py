@@ -9,6 +9,8 @@ from pathlib import Path
 class ScanResult:
     matches: list[str]
     elapsed_seconds: float
+    error_count: int
+    errors: tuple[str, ...]
 
 
 def scan_rule(rule_text: str, file_paths: list[str]) -> ScanResult:
@@ -19,13 +21,20 @@ def scan_rule(rule_text: str, file_paths: list[str]) -> ScanResult:
 
     rules = yara.compile(source=rule_text)
     matches: list[str] = []
+    errors: list[str] = []
     start = time.perf_counter()
     for path in file_paths:
         try:
             result = rules.match(filepath=str(Path(path)))
-        except Exception:
+        except Exception as exc:
+            errors.append(f"{path}: {exc}")
             result = []
         if result:
             matches.append(path)
     elapsed = time.perf_counter() - start
-    return ScanResult(matches=matches, elapsed_seconds=elapsed)
+    return ScanResult(
+        matches=matches,
+        elapsed_seconds=elapsed,
+        error_count=len(errors),
+        errors=tuple(errors),
+    )

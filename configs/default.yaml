@@ -6,6 +6,7 @@ split:
 features:
   strings_min_len: 6
   strings_max_per_file: 150
+  max_file_bytes: 16777216
 selection:
   top_k_features: 30
 yara:

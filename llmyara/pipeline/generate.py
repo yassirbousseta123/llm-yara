@@ -253,6 +253,7 @@ def generate_rules(
 
     cache = PromptCache(cache_path)
     backend = build_backend(backend_name, cfg.llm, cache)
+    backend_base_url = getattr(backend, "base_url", None)
 
     constraints = RuleConstraints(
         max_strings=cfg.yara.max_strings,
@@ -274,14 +275,30 @@ def generate_rules(
         prompt = generation_prompt(family=family, top_features=top_features, max_strings=cfg.yara.max_strings)
         prompt_source = "generated"
 
-        cached = cache.get(prompt) if backend_name in {"mock", "openai"} else None
+        cached = (
+            cache.get(
+                prompt,
+                backend=backend_name,
+                model=cfg.llm.model,
+                base_url=backend_base_url,
+            )
+            if backend_name in {"mock", "openai"}
+            else None
+        )
         if cached is not None:
             response = cached.response
             prompt_source = "cache"
         else:
             response = backend.generate(prompt, metadata={"family": family, "top_features": top_features})
             if backend_name in {"mock", "openai"}:
-                cache.add(prompt, response, backend=backend_name, model=cfg.llm.model, metadata={"family": family})
+                cache.add(
+                    prompt,
+                    response,
+                    backend=backend_name,
+                    model=cfg.llm.model,
+                    metadata={"family": family},
+                    base_url=backend_base_url,
+                )
 
         repairs = 0
         compile_error: str | None = None
@@ -290,6 +307,7 @@ def generate_rules(
         benign_fpr: float | None = None
         train_target_hits = 0
         failure_reason: str | None = None
+        scan_error_count = 0
 
         while True:
             try:
@@ -313,11 +331,21 @@ def generate_rules(
                 failure_reason = compile_res.error or ",".join(validation_errors)
             else:
                 train_scan = scan_rule(rule_text, train_target_paths)
+                train_scan_errors = int(getattr(train_scan, "error_count", 0))
+                if train_scan_errors:
+                    scan_error_count = train_scan_errors
+                    failure_reason = f"train_scan_error:{train_scan_errors}"
+                    break
                 train_target_hits = len(train_scan.matches)
                 if train_target_paths and train_target_hits < cfg.yara.min_train_target_hits:
                     failure_reason = f"train_target_hits_below_min:{train_target_hits}<{cfg.yara.min_train_target_hits}"
                 else:
                     scan = scan_rule(rule_text, benign_paths)
+                    benign_scan_errors = int(getattr(scan, "error_count", 0))
+                    if benign_scan_errors:
+                        scan_error_count = benign_scan_errors
+                        failure_reason = f"benign_dev_scan_error:{benign_scan_errors}"
+                        break
                     benign_fpr = len(scan.matches) / len(benign_paths) if benign_paths else 0.0
                     if benign_fpr > cfg.yara.benign_dev_fpr_threshold:
                         failure_reason = f"benign_dev_fpr_exceeded:{benign_fpr:.6f}"
@@ -338,7 +366,14 @@ def generate_rules(
             )
             response = backend.generate(repair, metadata={"family": family, "top_features": top_features})
             if backend_name in {"mock", "openai"}:
-                cache.add(repair, response, backend=backend_name, model=cfg.llm.model, metadata={"family": family, "repair": repairs})
+                cache.add(
+                    repair,
+                    response,
+                    backend=backend_name,
+                    model=cfg.llm.model,
+                    metadata={"family": family, "repair": repairs},
+                    base_url=backend_base_url,
+                )
 
         if not accepted:
             family_results[family] = {
@@ -347,6 +382,7 @@ def generate_rules(
                 "repairs": repairs,
                 "benign_dev_fpr": round(benign_fpr, 6) if benign_fpr is not None else None,
                 "train_target_hits": train_target_hits,
+                "scan_error_count": scan_error_count,
                 "backend": backend_name,
                 "model": cfg.llm.model,
                 "prompt_source": prompt_source,
@@ -365,6 +401,7 @@ def generate_rules(
             "repairs": repairs,
             "benign_dev_fpr": round(benign_fpr, 6),
             "train_target_hits": train_target_hits,
+            "scan_error_count": 0,
             "rule_path": str(rule_path),
             "backend": backend_name,
             "model": cfg.llm.model,

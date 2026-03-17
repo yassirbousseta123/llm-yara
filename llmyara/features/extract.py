@@ -24,7 +24,12 @@ def extract_features(manifest: list[dict[str, Any]], cfg: FeatureConfig) -> list
     for sample in manifest:
         sample_id = sample["sample_id"]
         path = sample["path"]
-        strings = extract_ascii_strings(path, min_len=cfg.strings_min_len, max_items=cfg.strings_max_per_file)
+        strings = extract_ascii_strings(
+            path,
+            min_len=cfg.strings_min_len,
+            max_items=cfg.strings_max_per_file,
+            max_file_bytes=cfg.max_file_bytes,
+        )
         imports = extract_import_tokens(path)
         pe_meta = extract_pe_metadata(path)
         tokens = _tokenize(strings, imports, pe_meta)

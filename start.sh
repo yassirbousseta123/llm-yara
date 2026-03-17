@@ -26,7 +26,31 @@ Usage:
 Notes:
 - Static analysis only; no malware execution.
 - OPENAI_API_KEY required only when --backend openai.
+- OPENAI_BASE_URL supported for OpenAI-compatible endpoints.
 USAGE
+}
+
+dependency_preflight() {
+  if ! command -v python >/dev/null 2>&1; then
+    echo "python is required but was not found on PATH" >&2
+    exit 2
+  fi
+
+  python - "$BACKEND" <<'PY'
+from __future__ import annotations
+
+import importlib.util
+import sys
+
+backend = sys.argv[1]
+required = ["yaml", "yara"]
+if backend == "openai":
+    required.append("openai")
+
+missing = [name for name in required if importlib.util.find_spec(name) is None]
+if missing:
+    raise SystemExit("Missing Python modules: " + ", ".join(missing))
+PY
 }
 
 MODE=""
@@ -77,6 +101,8 @@ if [[ ! -f "$CONFIG_PATH" ]]; then
   echo "Config file not found: $CONFIG_PATH" >&2
   exit 2
 fi
+
+dependency_preflight
 
 if [[ -z "$OUT_DIR" ]]; then
   OUTPUT_ROOT="$(default_output_root)"

@@ -37,3 +37,4 @@ project_2.md
 /.firecrawl/
 !llmyara/data/
 !llmyara/data/**
+llmyara/data/__pycache__/

@@ -13,6 +13,12 @@ def _id_to_path(manifest: list[dict[str, Any]]) -> dict[str, str]:
     return {row["sample_id"]: row["path"] for row in manifest}
 
 
+def _mean(rows: list[dict[str, Any]], key: str) -> float:
+    if not rows:
+        return 0.0
+    return round(sum(float(row.get(key, 0.0)) for row in rows) / len(rows), 6)
+
+
 def evaluate_rules(
     manifest: list[dict[str, Any]],
     splits: dict[str, Any],
@@ -37,6 +43,7 @@ def evaluate_rules(
                     "recall": 0.0,
                     "f1": 0.0,
                     "scan_seconds": 0.0,
+                    "scan_error_count": 0,
                     "compile_ok": False,
                 }
             )
@@ -56,6 +63,7 @@ def evaluate_rules(
                     "recall": 0.0,
                     "f1": 0.0,
                     "scan_seconds": 0.0,
+                    "scan_error_count": 0,
                     "compile_ok": False,
                     "compile_error": compile_res.error,
                 }
@@ -68,6 +76,39 @@ def evaluate_rules(
         target_scan = scan_rule(rule_text, target_paths)
         other_scan = scan_rule(rule_text, other_paths)
         benign_scan = scan_rule(rule_text, benign_test_paths)
+
+        scan_error_count = (
+            getattr(target_scan, "error_count", 0)
+            + getattr(other_scan, "error_count", 0)
+            + getattr(benign_scan, "error_count", 0)
+        )
+        if scan_error_count:
+            error_examples = list(getattr(target_scan, "errors", ()))
+            error_examples.extend(getattr(other_scan, "errors", ()))
+            error_examples.extend(getattr(benign_scan, "errors", ()))
+            rows.append(
+                {
+                    "family": family,
+                    "status": "scan_error",
+                    "tpr_target": 0.0,
+                    "fpr_benign": 0.0,
+                    "off_target_rate": 0.0,
+                    "precision": 0.0,
+                    "recall": 0.0,
+                    "f1": 0.0,
+                    "scan_seconds": round(
+                        target_scan.elapsed_seconds + other_scan.elapsed_seconds + benign_scan.elapsed_seconds,
+                        6,
+                    ),
+                    "scan_error_count": scan_error_count,
+                    "scan_error_examples": " | ".join(error_examples[:3]),
+                    "compile_ok": True,
+                    "target_test_size": len(target_paths),
+                    "other_test_size": len(other_paths),
+                    "benign_test_size": len(benign_test_paths),
+                }
+            )
+            continue
 
         tp = len(target_scan.matches)
         fn = max(0, len(target_paths) - tp)
@@ -86,6 +127,7 @@ def evaluate_rules(
             "recall": round(bm["recall"], 6),
             "f1": round(bm["f1"], 6),
             "scan_seconds": round(target_scan.elapsed_seconds + other_scan.elapsed_seconds + benign_scan.elapsed_seconds, 6),
+            "scan_error_count": 0,
             "target_test_size": len(target_paths),
             "other_test_size": len(other_paths),
             "benign_test_size": len(benign_test_paths),
@@ -93,12 +135,24 @@ def evaluate_rules(
         rows.append(row)
 
     ok_rows = [r for r in rows if r.get("status") == "ok"]
+    status_counts = {
+        "missing_rule": sum(1 for r in rows if r.get("status") == "missing_rule"),
+        "compile_failed": sum(1 for r in rows if r.get("status") == "compile_failed"),
+        "scan_error": sum(1 for r in rows if r.get("status") == "scan_error"),
+    }
     summary = {
         "families_total": len(rows),
         "families_ok": len(ok_rows),
-        "mean_f1": round(sum(r["f1"] for r in ok_rows) / len(ok_rows), 6) if ok_rows else 0.0,
-        "mean_tpr_target": round(sum(r["tpr_target"] for r in ok_rows) / len(ok_rows), 6) if ok_rows else 0.0,
-        "mean_fpr_benign": round(sum(r["fpr_benign"] for r in ok_rows) / len(ok_rows), 6) if ok_rows else 0.0,
+        "families_failed": len(rows) - len(ok_rows),
+        "families_missing_rule": status_counts["missing_rule"],
+        "families_compile_failed": status_counts["compile_failed"],
+        "families_scan_error": status_counts["scan_error"],
+        "mean_f1": _mean(rows, "f1"),
+        "mean_tpr_target": _mean(rows, "tpr_target"),
+        "mean_fpr_benign": _mean(rows, "fpr_benign"),
+        "mean_f1_ok_only": _mean(ok_rows, "f1"),
+        "mean_tpr_target_ok_only": _mean(ok_rows, "tpr_target"),
+        "mean_fpr_benign_ok_only": _mean(ok_rows, "fpr_benign"),
     }
     return rows, summary
 

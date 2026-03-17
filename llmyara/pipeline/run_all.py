@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+import os
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +14,7 @@ from llmyara.features.extract import extract_features
 from llmyara.pipeline.generate import generate_rules
 from llmyara.selection.score import select_all_families
 from llmyara.utils.files import ensure_dir, write_json
+from llmyara.utils.provenance import build_provenance, file_hashes
 from llmyara.utils.jsonl import write_jsonl
 from llmyara.yara.compile import is_yara_available
 
@@ -67,15 +69,35 @@ def run_all(
     write_json(out_dir / "summary.json", eval_summary)
     write_summary_markdown(out_dir / "summary.md", eval_rows, eval_summary)
 
+    artifacts = {
+        "manifest": str((out_dir / "manifest.jsonl").resolve()),
+        "splits": str((out_dir / "splits.json").resolve()),
+        "features": str((out_dir / "features.jsonl").resolve()),
+        "selected": str((out_dir / "selected_features.json").resolve()),
+        "generation": str((out_dir / "generation_summary.json").resolve()),
+        "llm_cache": str((out_dir / "llm_cache.jsonl").resolve()),
+        "results_csv": str((out_dir / "results_per_family.csv").resolve()),
+        "summary_json": str((out_dir / "summary.json").resolve()),
+        "summary_markdown": str((out_dir / "summary.md").resolve()),
+    }
     write_json(
         out_dir / "run_manifest.json",
         {
             "config": asdict(cfg),
             "backend": backend_name,
+            "model": cfg.llm.model,
+            "openai_base_url": os.getenv("OPENAI_BASE_URL") or None,
             "malware_dir": malware_dir,
             "benign_dir": benign_dir,
             "output_dir": str(Path(out_dir).resolve()),
-            "llm_cache": str((out_dir / "llm_cache.jsonl").resolve()),
+            "llm_cache": artifacts["llm_cache"],
+            "provenance": build_provenance(
+                backend=backend_name,
+                model=cfg.llm.model,
+                base_url=os.getenv("OPENAI_BASE_URL") or None,
+                cwd=Path(__file__).resolve().parents[2],
+            ),
+            "artifact_hashes": file_hashes(artifacts),
         },
     )
 
@@ -85,15 +107,7 @@ def run_all(
         "families_with_rules": len(generation["rule_paths"]),
         "summary": eval_summary,
         "artifacts": {
-            "manifest": str((out_dir / "manifest.jsonl").resolve()),
-            "splits": str((out_dir / "splits.json").resolve()),
-            "features": str((out_dir / "features.jsonl").resolve()),
-            "selected": str((out_dir / "selected_features.json").resolve()),
-            "generation": str((out_dir / "generation_summary.json").resolve()),
-            "llm_cache": str((out_dir / "llm_cache.jsonl").resolve()),
-            "results_csv": str((out_dir / "results_per_family.csv").resolve()),
-            "summary_json": str((out_dir / "summary.json").resolve()),
-            "summary_markdown": str((out_dir / "summary.md").resolve()),
+            **artifacts,
             "run_manifest": str((out_dir / "run_manifest.json").resolve()),
         },
     }

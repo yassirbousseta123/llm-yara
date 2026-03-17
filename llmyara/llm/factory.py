@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from llmyara.config import LLMConfig
 from llmyara.llm.base import LLMBackend
 from llmyara.llm.cache import PromptCache
@@ -13,7 +15,12 @@ def build_backend(name: str, cfg: LLMConfig, cache: PromptCache) -> LLMBackend:
     if normalized == "mock":
         return MockBackend()
     if normalized == "replay":
-        return ReplayBackend(cache)
+        return ReplayBackend(
+            cache,
+            source_backend="openai",
+            model=cfg.model,
+            base_url=os.getenv("OPENAI_BASE_URL") or None,
+        )
     if normalized == "openai":
         return OpenAIBackend(model=cfg.model, temperature=cfg.temperature, timeout_seconds=cfg.timeout_seconds)
     raise ValueError(f"Unsupported backend: {name}")

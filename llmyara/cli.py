@@ -13,6 +13,7 @@ from llmyara.config import load_config
 from llmyara.data.demo_data import create_demo_dataset
 from llmyara.data.indexer import build_manifest
 from llmyara.data.splits import build_splits
+from llmyara.eval.audit_bundle import export_audit_bundle
 from llmyara.eval.baseline_compare import evaluate_baselines
 from llmyara.eval.compare_all import compare_all_methods
 from llmyara.eval.evaluate import evaluate_rules, write_results_csv
@@ -237,6 +238,15 @@ def cmd_run_all_compare(args: argparse.Namespace) -> None:
     print(json.dumps(result, indent=2))
 
 
+def cmd_export_audit_bundle(args: argparse.Namespace) -> None:
+    result = export_audit_bundle(
+        primary_run_dir=args.primary_run_dir,
+        replay_run_dir=args.replay_run_dir,
+        out_dir=args.out,
+    )
+    print(json.dumps(result, indent=2))
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="LLM-YARA pipeline CLI")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -387,6 +397,15 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Comma-separated byte n-gram sizes for baseline-autoyara",
     )
     compare_all.set_defaults(func=cmd_compare_all)
+
+    export_bundle = sub.add_parser(
+        "export-audit-bundle",
+        help="Export a safe audit bundle from frozen run artifacts",
+    )
+    export_bundle.add_argument("--primary-run-dir", required=True)
+    export_bundle.add_argument("--replay-run-dir")
+    export_bundle.add_argument("--out", required=True)
+    export_bundle.set_defaults(func=cmd_export_audit_bundle)
 
     return parser
 

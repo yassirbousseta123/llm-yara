@@ -18,6 +18,7 @@ class SplitConfig:
 class FeatureConfig:
     strings_min_len: int = 6
     strings_max_per_file: int = 150
+    max_file_bytes: int = 16 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -79,6 +80,7 @@ def load_config(path: str | Path | None) -> AppConfig:
         "features": {
             "strings_min_len": 6,
             "strings_max_per_file": 150,
+            "max_file_bytes": 16 * 1024 * 1024,
         },
         "selection": {
             "top_k_features": 30,

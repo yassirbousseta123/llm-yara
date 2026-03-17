@@ -4,9 +4,17 @@ import re
 from pathlib import Path
 
 
-def extract_ascii_strings(path: str | Path, min_len: int, max_items: int) -> list[str]:
+def extract_ascii_strings(
+    path: str | Path,
+    min_len: int,
+    max_items: int,
+    max_file_bytes: int | None = None,
+) -> list[str]:
+    path_obj = Path(path)
     try:
-        raw = Path(path).read_bytes()
+        if max_file_bytes is not None and path_obj.stat().st_size > max_file_bytes:
+            return []
+        raw = path_obj.read_bytes()
     except OSError:
         return []
     pattern = rb"[\x20-\x7e]{" + str(min_len).encode("ascii") + rb",}"

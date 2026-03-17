@@ -8,6 +8,7 @@ services:
     environment:
       - LLM_BACKEND=${LLM_BACKEND:-mock}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
     volumes:
       - ./outputs:/outputs
       - ./data:/data:ro
