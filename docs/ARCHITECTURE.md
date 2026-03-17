@@ -25,6 +25,9 @@ Read when:
 ## Evaluation Contract
 - Aggregate headline metrics must include all families, not only `status=ok`.
 - `summary.json` also records explicit `ok-only` means for analysis.
+- Research metrics are first-class:
+  - `rule_specificity = 1 - off_target_rate`
+  - `rule_complexity = rule_string_count + condition_clause_count`
 - Missing rules, compile failures, and scan errors remain visible in per-family outputs.
 - Scan exceptions are surfaced as `scan_error` status instead of being silently converted into misses.
 
@@ -62,7 +65,8 @@ Read when:
 Each run writes a self-contained artifact bundle:
 - `run_manifest.json`: command + config snapshot + provenance + artifact hashes
 - `manifest.jsonl`, `splits.json`, `features.jsonl`, `selected_features.json`
-- `rules/*.yar`, `generation_summary.json`
+- `rules/*.yar`, `generation_summary.json`, `failure_analysis.json`
 - `results_per_family.csv`, `summary.json`, `summary.md`
 - `llm_cache.jsonl` for prompt replay/freeze
 - optional `comparison/` bundle for same-split method comparison
+- `comparison/significance_vs_primary.json` for paired per-family F1 tests

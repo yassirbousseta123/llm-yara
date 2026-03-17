@@ -1,8 +1,20 @@
 {
-  "artifact_hashes": {},
+  "artifact_hashes": {
+    "failure_analysis": "9f41742b328027e72898e3e21104c978a5569474b709439d958b38a538c75a4c",
+    "features": "9432726675f489c3630cd9153fa3cad95b10eff15674bc938658156131dd3abc",
+    "generation": "71d0a4795584643bd98f88fac3fcc245cb0d1528b0bb08b02584c88225e6c8b9",
+    "llm_cache": "31d8e1d35c1946b0019c4b17d7b0ae241b0f8089f16567ff015d04623b3688e9",
+    "manifest": "780404cf3acc56e9d1d2915111933b7eccc769b225215edef7ce6a176d8262da",
+    "results_csv": "dfa58ea74d3e6d49e175fc6f49e67bdb149112a38b1078042f850569d112195c",
+    "selected": "201e0745e3b2c11aea0e57ef68fafab891c8dee10bc5cb8f686cbe157e636f7c",
+    "splits": "6ebdf6f0accbeb095c02557597bc2f661291a86fb37f228da492815ea584afa8",
+    "summary_json": "3b860ab698be8f86e297439fb15d1de4275f35b8c31475d614f45827a8759694",
+    "summary_markdown": "1e54e8e0df6b9f3de757e08adec8da2b8a70a135bad65634714115ddc2a4caf5"
+  },
   "backend": "openai",
   "config": {
     "features": {
+      "max_file_bytes": 16777216,
       "strings_max_per_file": 150,
       "strings_min_len": 6
     },
@@ -34,5 +46,19 @@
   },
   "model": "gpt-5-mini",
   "openai_base_url": null,
-  "provenance": {}
+  "provenance": {
+    "backend": "openai",
+    "base_url": null,
+    "cache_identity_version": "v2",
+    "dependencies": {
+      "PyYAML": "6.0.2",
+      "openai": "1.61.1",
+      "scikit-learn": "1.6.1",
+      "yara-python": "4.5.1"
+    },
+    "git_commit": "25c2f67bdd0d4408aef10375f90ad9a2f11acefa",
+    "model": "gpt-5-mini",
+    "platform": "macOS-26.0.1-arm64-arm-64bit",
+    "python_version": "3.12.2"
+  }
 }

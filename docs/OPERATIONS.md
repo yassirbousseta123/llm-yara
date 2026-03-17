@@ -21,6 +21,7 @@ Every production run should include:
 - `features.jsonl`
 - `selected_features.json`
 - `generation_summary.json`
+- `failure_analysis.json`
 - `llm_cache.jsonl`
 - `results_per_family.csv`
 - `summary.json`
@@ -36,6 +37,8 @@ For final same-split comparison runs also keep:
 - `comparison/results_all_methods.csv`
 - `comparison/summary_all_methods.json`
 - `comparison/summary_all_methods.md`
+- `comparison/significance_vs_primary.json`
+- `comparison/failure_analysis.json`
 - `comparison/llmyara_llm/method_manifest.json`
 - `comparison_run_manifest.json`
 
@@ -66,4 +69,5 @@ python -m llmyara.cli export-audit-bundle \
 - If a family is rejected with `train_target_hits_below_min`, the rule is syntactically valid but semantically useless; improve features/prompting before rerunning full experiments.
 - If a family is rejected with `benign_dev_fpr_exceeded`, the rule is too broad; tighten signal quality or condition structure.
 - If a family ends in `scan_error`, treat the evaluation as invalid until the underlying file-level scan failure is understood.
+- Use `failure_analysis.json` to track missing-rule families and dominant rejection buckets.
 - Do not report compile-only or always-false rules as successful generations.

@@ -1,0 +1,34 @@
+{
+  "comparisons": [
+    {
+      "baseline_method": "topstrings",
+      "metric": "f1",
+      "n_pairs": 138,
+      "observed_diff": 0.004442,
+      "p_value": 0.84843,
+      "primary_method": "llmyara-llm",
+      "significant_0_05": false,
+      "test": "paired_randomization"
+    },
+    {
+      "baseline_method": "apiary-static",
+      "metric": "f1",
+      "n_pairs": 138,
+      "observed_diff": 0.268289,
+      "p_value": 0.0002,
+      "primary_method": "llmyara-llm",
+      "significant_0_05": true,
+      "test": "paired_randomization"
+    },
+    {
+      "baseline_method": "autoyara-bicluster",
+      "metric": "f1",
+      "n_pairs": 138,
+      "observed_diff": 0.147952,
+      "p_value": 0.0002,
+      "primary_method": "llmyara-llm",
+      "significant_0_05": true,
+      "test": "paired_randomization"
+    }
+  ]
+}

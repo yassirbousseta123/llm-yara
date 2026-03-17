@@ -220,9 +220,18 @@ A `run-all-compare` output should contain:
 
 `summary.json` now reports both:
 - all-family aggregates in `mean_f1`, `mean_tpr_target`, `mean_fpr_benign`
+- all-family research metrics in `mean_rule_specificity`, `mean_rule_complexity`
 - ok-only aggregates in `mean_f1_ok_only`, `mean_tpr_target_ok_only`, `mean_fpr_benign_ok_only`
 
 This avoids overstating performance when some families end in `missing_rule`, `compile_failed`, or `scan_error`.
+
+`results_per_family.csv` also includes:
+- `off_target_rate`
+- `rule_specificity`
+- `rule_string_count`
+- `condition_clause_count`
+- `rule_complexity`
+- `rule_bytes`
 
 ## Public Audit Bundle
 To export a safe, reviewable subset of frozen results without publishing the entire `outputs/` tree:
@@ -235,6 +244,9 @@ python -m llmyara.cli export-audit-bundle \
 ```
 
 The exported bundle contains sanitized summaries and manifests with local output paths removed.
+It also includes:
+- `significance_vs_primary.json`
+- `failure_analysis.json`
 
 ## Reproducibility
 - Use fixed seeds from `configs/default.yaml`.
@@ -243,6 +255,7 @@ The exported bundle contains sanitized summaries and manifests with local output
 - `run-all-compare` writes unified all-method comparison artifacts under `comparison/`.
 - Primary runs also persist `llm_cache.jsonl` and `comparison_run_manifest.json` for replay/freeze workflows.
 - `run_manifest.json` and `comparison_run_manifest.json` include provenance metadata and artifact hashes.
+- audit export backfills provenance/hash metadata if the frozen source manifest predates those fields.
 
 ## Baseline Labeling Policy
 When reporting comparisons, label each method as one of:

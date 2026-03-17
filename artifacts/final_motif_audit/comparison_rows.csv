@@ -1,5 +1,5 @@
-method,role,status,families_total,families_ok,mean_f1,mean_tpr_target,mean_fpr_benign,rule_count
-llmyara-llm,primary,primary,138,128,0.423977,0.404342,0.0,128
-topstrings,baseline,reproduced,138,138,0.419535,0.479681,0.006078,138
-apiary-static,baseline,re-implemented,138,138,0.155688,0.699924,0.071762,138
-autoyara-bicluster,baseline,re-implemented,138,138,0.276024,0.796508,0.11828,138
+method,role,status,families_total,families_ok,mean_f1,mean_tpr_target,mean_fpr_benign,mean_rule_specificity,mean_rule_complexity,rule_count
+llmyara-llm,primary,primary,138,128,0.423977,0.404342,0.0,0.998832,11.775362,128
+topstrings,baseline,reproduced,138,138,0.419535,0.479681,0.006078,0.992386,8.942029,138
+apiary-static,baseline,re-implemented,138,138,0.155688,0.699924,0.071762,0.863839,8.507246,138
+autoyara-bicluster,baseline,re-implemented,138,138,0.276024,0.796508,0.11828,0.817978,11.492754,138

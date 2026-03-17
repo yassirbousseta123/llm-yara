@@ -1,0 +1,91 @@
+{
+  "failure_families": [
+    {
+      "family": "carbanak",
+      "reason": "train_target_hits_below_min:0<1",
+      "reason_bucket": "train_target_hits_below_min",
+      "repairs": 3,
+      "scan_error_count": 0,
+      "train_target_hits": 0
+    },
+    {
+      "family": "cerber",
+      "reason": "benign_dev_fpr_exceeded:0.021739",
+      "reason_bucket": "benign_dev_fpr_exceeded",
+      "repairs": 3,
+      "scan_error_count": 0,
+      "train_target_hits": 2
+    },
+    {
+      "family": "dharma",
+      "reason": "benign_dev_fpr_exceeded:0.021739",
+      "reason_bucket": "benign_dev_fpr_exceeded",
+      "repairs": 3,
+      "scan_error_count": 0,
+      "train_target_hits": 6
+    },
+    {
+      "family": "dridex",
+      "reason": "train_target_hits_below_min:0<1",
+      "reason_bucket": "train_target_hits_below_min",
+      "repairs": 3,
+      "scan_error_count": 0,
+      "train_target_hits": 0
+    },
+    {
+      "family": "mosaicregressor",
+      "reason": "train_target_hits_below_min:0<1",
+      "reason_bucket": "train_target_hits_below_min",
+      "repairs": 3,
+      "scan_error_count": 0,
+      "train_target_hits": 0
+    },
+    {
+      "family": "nazar",
+      "reason": "train_target_hits_below_min:0<1",
+      "reason_bucket": "train_target_hits_below_min",
+      "repairs": 3,
+      "scan_error_count": 0,
+      "train_target_hits": 0
+    },
+    {
+      "family": "nymaim",
+      "reason": "train_target_hits_below_min:0<1",
+      "reason_bucket": "train_target_hits_below_min",
+      "repairs": 3,
+      "scan_error_count": 0,
+      "train_target_hits": 0
+    },
+    {
+      "family": "phorpiex",
+      "reason": "train_target_hits_below_min:0<1",
+      "reason_bucket": "train_target_hits_below_min",
+      "repairs": 3,
+      "scan_error_count": 0,
+      "train_target_hits": 0
+    },
+    {
+      "family": "ryuk",
+      "reason": "benign_dev_fpr_exceeded:0.065217",
+      "reason_bucket": "benign_dev_fpr_exceeded",
+      "repairs": 3,
+      "scan_error_count": 0,
+      "train_target_hits": 15
+    },
+    {
+      "family": "smokeloader",
+      "reason": "train_target_hits_below_min:0<1",
+      "reason_bucket": "train_target_hits_below_min",
+      "repairs": 3,
+      "scan_error_count": 0,
+      "train_target_hits": 0
+    }
+  ],
+  "families_accepted": 128,
+  "families_rejected": 10,
+  "families_total": 138,
+  "reason_counts": {
+    "benign_dev_fpr_exceeded": 3,
+    "train_target_hits_below_min": 7
+  }
+}
