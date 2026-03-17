@@ -263,6 +263,7 @@ When reporting comparisons, label each method as one of:
 - `re-implemented`
 - `paper-only`
 
+Use `paper-only` only for cited related work that was not executed from this repository.
 Avoid presenting `paper-only` results as directly comparable to your own split.
 
 ## Scope and Limitations

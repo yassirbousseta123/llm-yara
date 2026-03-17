@@ -48,6 +48,7 @@ Use one of:
 - `re-implemented`
 - `paper-only`
 
+Use `paper-only` only for cited related work that was not executed from this repository.
 Never present `paper-only` metrics as directly comparable to your own split.
 
 ## Recommended Final Run

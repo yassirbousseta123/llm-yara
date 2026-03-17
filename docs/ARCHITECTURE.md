@@ -48,7 +48,8 @@ Read when:
 
 ## Baseline Contract
 - Baselines write one YARA file per family plus `baseline_manifest.json`.
-- Baseline manifest must include `status` label from: `reproduced`, `re-implemented`, `paper-only`.
+- Repo-executed baseline manifests use `reproduced` or `re-implemented`.
+- `paper-only` is reserved for cited related work in docs/reporting; it is not a shipped baseline manifest status.
 - Current shipped baselines:
   - `baseline-topstrings` (`reproduced`)
   - `baseline-apiary-static` (`re-implemented`)
