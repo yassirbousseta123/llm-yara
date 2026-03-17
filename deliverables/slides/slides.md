@@ -289,7 +289,7 @@ rule nanolocker_candidate_01 {
 - Import predicate adds a family-specific structural check
 - Final rule stays simple enough to audit
 
-<div class="source">Source: <code>outputs/final_motif_openai/rules/nanolocker.yar</code></div>
+<div class="source">Source: <code>deliverables/examples/nanolocker.yar</code></div>
 
 <!-- speaker notes
 Show one real rule so the audience sees the output quality directly. This is not a synthetic example; it comes from the saved primary output.
@@ -338,7 +338,7 @@ In this comparison, the LLM method gives:
 - **Zero benign FPR** (0.000)
 - **Highest specificity** (0.999)
 - **128 / 138 accepted families**
-- **Numerically highest mean F1**
+- **Numerically highest mean F1 among executed methods**
 
 The main trade-off is lower benign FPR versus lower recall and lower family coverage. The F1 difference vs `topstrings` is not significant.
 
@@ -365,7 +365,7 @@ Close with the measured result: low benign FPR, high specificity, but lower reca
 | llmyara-llm | 128/138 | 0.4240 | 0.4043 | 0.0000 | 0.9988 | 11.78 | 0.0012 | 128 |
 | topstrings | 138/138 | 0.4195 | 0.4797 | 0.0061 | 0.9924 | 8.94 | 0.0076 | 138 |
 | apiary-static | 138/138 | 0.1557 | 0.6999 | 0.0718 | 0.8638 | 8.51 | 0.1362 | 138 |
-| autoyara | 138/138 | 0.2760 | 0.7965 | 0.1183 | 0.8180 | 11.49 | 0.1820 | 138 |
+| autoyara-bicluster | 138/138 | 0.2760 | 0.7965 | 0.1183 | 0.8180 | 11.49 | 0.1820 | 138 |
 
 Off-target rate = fraction of non-family malware samples that trigger the rule.
 
@@ -424,7 +424,7 @@ The 3 "FPR exceeded" families: rules match benign files above the 0.02 threshold
 
 ## Appendix: Annotated YARA Rule -- nanolocker (F1 = 1.0)
 
-Source: `outputs/final_motif_openai/rules/nanolocker.yar`
+Source: `deliverables/examples/nanolocker.yar`
 
 ```yara
 import "pe"
