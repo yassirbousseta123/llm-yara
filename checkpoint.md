@@ -1,7 +1,7 @@
 # Checkpoint
 
 ## Objective
-Build a production-grade, reproducible LLM-YARA system with deterministic data handling, secure static-only analysis, and professional research-grade evaluation artifacts.
+Build an LLM-YARA system with deterministic data handling, static-only analysis, and reproducible evaluation artifacts.
 
 ## Scope Locked (Current)
 - Keep static analysis only (no malware execution).

@@ -1,0 +1,102 @@
+% LLM-YARA — Mean F1 Score Comparison Bar Chart
+% Compile: pdflatex f1_comparison.tex
+\documentclass[border=5pt]{standalone}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% ── Colour palette ──────────────────────────────────────────────────
+\definecolor{hlblue}{HTML}{2563EB}
+\definecolor{bardgray}{HTML}{94A3B8}
+\definecolor{refline}{HTML}{F59E0B}
+\definecolor{annotxt}{HTML}{6B7280}
+
+\begin{document}
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    width=11cm,
+    height=7.5cm,
+    bar width=1.2cm,
+    ymin=0, ymax=0.52,
+    ylabel={Mean F1 Score},
+    ylabel style={font=\sffamily\small, at={(axis description cs:-0.06,0.5)}},
+    xtick=data,
+    symbolic x coords={%
+        llmyara-llm,
+        topstrings,
+        autoyara-bicluster,
+        apiary-static},
+    x tick label style={
+        font=\sffamily\small,
+        rotate=15,
+        anchor=north east,
+    },
+    y tick label style={font=\sffamily\small},
+    ytick={0, 0.1, 0.2, 0.3, 0.4, 0.5},
+    ymajorgrids=true,
+    grid style={gray!20, thin},
+    axis line style={gray!60},
+    tick style={gray!60},
+    % ── remove top and right spines ──
+    axis x line*=bottom,
+    axis y line*=left,
+    enlarge x limits=0.22,
+    % ── value labels on bars ──
+    nodes near coords,
+    every node near coord/.append style={
+        font=\sffamily\scriptsize\bfseries,
+        anchor=south,
+        yshift=1pt,
+    },
+    nodes near coords align={vertical},
+    point meta=explicit symbolic,
+    % ── legend off ──
+    legend style={draw=none},
+    clip=false,
+]
+
+% ── Bars ────────────────────────────────────────────────────────────
+% llmyara-llm (highlighted)
+\addplot[fill=hlblue, draw=hlblue!80!black, line width=0.4pt]
+    coordinates {
+        (llmyara-llm, 0.423977) [0.424]
+    };
+
+% topstrings
+\addplot[fill=bardgray!60, draw=bardgray!80!black, line width=0.4pt]
+    coordinates {
+        (topstrings, 0.419535) [0.420]
+    };
+
+% autoyara-bicluster
+\addplot[fill=bardgray!40, draw=bardgray!70!black, line width=0.4pt]
+    coordinates {
+        (autoyara-bicluster, 0.276024) [0.276]
+    };
+
+% apiary-static
+\addplot[fill=bardgray!25, draw=bardgray!60!black, line width=0.4pt]
+    coordinates {
+        (apiary-static, 0.155688) [0.156]
+    };
+
+% ── Horizontal dashed reference line at topstrings level ────────────
+\draw[refline, dashed, line width=0.8pt]
+    (axis cs:llmyara-llm, 0.419535) +(-1.0cm,0)
+    -- (axis cs:apiary-static, 0.419535) +(1.0cm,0);
+
+% ── Annotation: p-value between llmyara and topstrings ──────────────
+% Position the annotation between the two bars, above them
+\node[font=\sffamily\scriptsize, text=annotxt, align=center]
+    at (axis cs:llmyara-llm, 0.48) [xshift=0.65cm]
+    {\textit{p}\,=\,0.848 (n.s.)};
+
+% ── Small bracket between the two bars ──
+\draw[annotxt, line width=0.5pt]
+    (axis cs:llmyara-llm, 0.455) +(0,0) -- +(0, 0.12cm)
+    -- (axis cs:topstrings, 0.455) +(0, 0.12cm) -- +(0,0);
+
+\end{axis}
+\end{tikzpicture}
+\end{document}

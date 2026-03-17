@@ -8,12 +8,12 @@ Read when:
 
 ## Repo-Executed Comparison Set
 
-These are the methods actually run on the frozen repo split and included in the final same-split comparison bundle.
+These are the methods actually run on the repo split and included in the final same-split comparison bundle.
 
 | Executed method | Repo command or artifact | Status label | Type | Notes |
 |---|---|---|---|---|
 | `llmyara-llm` | `python -m llmyara.cli run-all-compare ...` | `primary` | LLM-based method | Static-only structured generation with compile/repair/gating. |
-| `topstrings` | `python -m llmyara.cli baseline-topstrings ...` | `reproduced` | Deterministic repo baseline | Same evaluation split as the primary method. Included because it is a strong, auditable static baseline on this repo. |
+| `topstrings` | `python -m llmyara.cli baseline-topstrings ...` | `reproduced` | Deterministic repo baseline | Same evaluation split as the primary method. Included as a repo-executed static baseline on this split. |
 | `apiary-static` | `python -m llmyara.cli baseline-apiary-static ...` | `re-implemented` | Literature-inspired baseline | Static import/API discriminative proxy evaluated on the same split. |
 | `autoyara-bicluster` | `python -m llmyara.cli baseline-autoyara ...` | `re-implemented` | Literature-inspired baseline | Deterministic byte n-gram + bicluster-style approximation evaluated on the same split. |
 

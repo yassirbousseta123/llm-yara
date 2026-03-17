@@ -1,13 +1,13 @@
 # LLM-YARA: Reproducible Static-Analysis YARA Generation
 
-A production-oriented pipeline for generating and evaluating YARA rules from malware family samples using deterministic preprocessing and bounded LLM-assisted synthesis.
+A pipeline for generating and evaluating YARA rules from malware family samples using deterministic preprocessing and bounded LLM-assisted synthesis.
 
 ## Security Posture
 - Static analysis only.
 - No malware execution.
 - Dataset directories can be mounted read-only.
 - Deterministic splits and replayable LLM responses.
-- Provenance manifests with git/dependency metadata and artifact hashes.
+- Run manifests with git/dependency metadata and artifact hashes.
 
 ## What This Repository Delivers
 - End-to-end CLI pipeline:
@@ -86,8 +86,8 @@ Primary comparison run:
 Use `--backend openai` only when `OPENAI_API_KEY` is set.
 Set `OPENAI_BASE_URL` if using an OpenAI-compatible local or hosted endpoint.
 
-## Recommended Final Workflow
-1. Run a real backend once and freeze the cache:
+## Final Run Sequence
+1. Run a real backend once and save the cache:
 ```bash
 ./start.sh --mode full \
   --compare-all \
@@ -105,7 +105,7 @@ Set `OPENAI_BASE_URL` if using an OpenAI-compatible local or hosted endpoint.
   --out /absolute/path/to/outputs/final_compare_replay \
   --backend replay
 ```
-3. Write the report from the frozen artifact bundle, not from ad hoc reruns.
+3. Write the report from the saved result bundle, not from ad hoc reruns.
 
 ## CLI Reference
 ```bash
@@ -234,7 +234,7 @@ This avoids overstating performance when some families end in `missing_rule`, `c
 - `rule_bytes`
 
 ## Public Audit Bundle
-To export a safe, reviewable subset of frozen results without publishing the entire `outputs/` tree:
+To export a safe, reviewable subset of saved results without publishing the entire `outputs/` tree:
 
 ```bash
 python -m llmyara.cli export-audit-bundle \
@@ -253,9 +253,9 @@ It also includes:
 - Use backend `replay` for deterministic regeneration from cached responses.
 - Each run persists artifacts in one folder (`outputs/<run_id>/`).
 - `run-all-compare` writes unified all-method comparison artifacts under `comparison/`.
-- Primary runs also persist `llm_cache.jsonl` and `comparison_run_manifest.json` for replay/freeze workflows.
-- `run_manifest.json` and `comparison_run_manifest.json` include provenance metadata and artifact hashes.
-- audit export backfills provenance/hash metadata if the frozen source manifest predates those fields.
+- Primary runs also persist `llm_cache.jsonl` and `comparison_run_manifest.json` for replay and result export.
+- `run_manifest.json` and `comparison_run_manifest.json` include run metadata and artifact hashes.
+- audit export backfills missing manifest metadata when older runs do not contain those fields.
 
 ## Baseline Labeling Policy
 When reporting comparisons, label each method as one of:
