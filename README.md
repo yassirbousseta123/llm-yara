@@ -32,6 +32,8 @@ docker compose build
 docker compose run --rm llmyara --mode demo
 ```
 
+Demo mode does **not** require `OPENAI_API_KEY`.
+
 ## Quickstart (Local)
 ```bash
 python -m venv .venv
@@ -44,6 +46,42 @@ pip install -e .[runtime,ml]
 ```
 
 Use an isolated virtualenv for local runtime work. Shared conda/scientific environments can break compiled dependencies used by `runtime,ml`.
+
+## OpenAI Backend Setup
+Use the OpenAI backend only when you want a real LLM run. The easiest setup is to export the key in the same shell where you run the commands:
+
+### Local shell
+```bash
+export OPENAI_API_KEY="your-key-here"
+# optional, only for OpenAI-compatible endpoints:
+# export OPENAI_BASE_URL="http://host:port/v1"
+```
+
+### Docker
+`docker compose` reads the same shell environment, so export the key first, then use a real OpenAI-backed command:
+
+```bash
+export OPENAI_API_KEY="your-key-here"
+docker compose build
+docker compose run --rm llmyara \
+  --mode full \
+  --compare-all \
+  --malware-dir /data/malware \
+  --benign-dir /data/benign \
+  --out /outputs/final_compare \
+  --backend openai
+```
+
+If `OPENAI_API_KEY` is not set, use `--backend mock` or `--backend replay` instead of `--backend openai`.
+
+## Recommended Run Path
+1. Run demo mode first to confirm the environment works:
+```bash
+./start.sh --mode demo
+```
+2. If you want a real LLM run, export `OPENAI_API_KEY` in the same shell.
+3. Arrange malware and benign samples using the dataset layout below.
+4. Run the full comparison flow with `--backend openai`.
 
 ## Full Run (Local)
 ```bash
@@ -75,6 +113,7 @@ Rules:
 
 Primary comparison run:
 ```bash
+export OPENAI_API_KEY="your-key-here"
 ./start.sh --mode full \
   --compare-all \
   --malware-dir /absolute/path/to/malware \
@@ -86,9 +125,29 @@ Primary comparison run:
 Use `--backend openai` only when `OPENAI_API_KEY` is set.
 Set `OPENAI_BASE_URL` if using an OpenAI-compatible local or hosted endpoint.
 
+## Full Run (Docker)
+Place samples under:
+- `./data/malware`
+- `./data/benign`
+
+Then run:
+
+```bash
+export OPENAI_API_KEY="your-key-here"
+docker compose build
+docker compose run --rm llmyara \
+  --mode full \
+  --compare-all \
+  --malware-dir /data/malware \
+  --benign-dir /data/benign \
+  --out /outputs/final_compare \
+  --backend openai
+```
+
 ## Final Run Sequence
 1. Run a real backend once and save the cache:
 ```bash
+export OPENAI_API_KEY="your-key-here"
 ./start.sh --mode full \
   --compare-all \
   --malware-dir /absolute/path/to/malware \
@@ -233,8 +292,8 @@ This avoids overstating performance when some families end in `missing_rule`, `c
 - `rule_complexity`
 - `rule_bytes`
 
-## Public Audit Bundle
-To export a safe, reviewable subset of saved results without publishing the entire `outputs/` tree:
+## Audit Bundle Export
+To export a safe, reviewable subset of saved results without copying the entire `outputs/` tree:
 
 ```bash
 python -m llmyara.cli export-audit-bundle \
